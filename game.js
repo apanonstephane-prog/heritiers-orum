@@ -15,13 +15,27 @@ let best = 0; try { best = +localStorage.getItem('orun-best') || 0; } catch (e) 
 /* ---------- Rotation paysage forcée sur téléphone en portrait ---------- */
 let ROT = false;
 function fitStage() {
-  let w = innerWidth, h = innerHeight; ROT = touch && h > w;
+  const vv = window.visualViewport;
+  let w = Math.round(vv ? vv.width : innerWidth), h = Math.round(vv ? vv.height : innerHeight); ROT = touch && h > w;
+  // un changement d'orientation pendant un appui laisse sinon le joystick « collé »
+  try { inp.jx = inp.jy = 0; $('knob').style.transform = ''; } catch (e) {}
+  window.scrollTo(0, 0);
   const st = $('stage'); st.classList.toggle('rot', ROT); if (ROT) [w, h] = [h, w];
   st.style.width = w + 'px'; st.style.height = h + 'px';
   const k = Math.min(w / VW, h / VH), gw = VW * k, gh = VH * k, gs = $('game').style;
   gs.width = gw + 'px'; gs.height = gh + 'px'; gs.left = (w - gw) / 2 + 'px'; gs.top = (h - gh) / 2 + 'px';
 }
-addEventListener('resize', fitStage); fitStage();
+// iOS : les dimensions se stabilisent avec retard après une rotation ou l'apparition de la barre Safari
+let fitT = [];
+function refit() { fitStage(); fitT.forEach(clearTimeout); fitT = [120, 350, 800].map(d => setTimeout(fitStage, d)); }
+addEventListener('resize', refit); addEventListener('orientationchange', refit);
+if (window.visualViewport) visualViewport.addEventListener('resize', refit);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refit(); });
+// pas de défilement, de rebond ni de zoom par pincement/double-tape
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+fitStage();
 
 /* ---------- Audio procédural (SFX + musique afro-futuriste) ---------- */
 let AC = null, master = null, muted = false, noiseBuf = null, mus = null;

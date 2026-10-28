@@ -26,14 +26,14 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
-html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--ui)}
-#stage{position:fixed;left:0;top:0;width:100%;height:100%;overflow:hidden;background:var(--night)}
-#stage.rot{transform-origin:0 0;transform:rotate(90deg) translateY(-100%)}
+html,body{height:100%;margin:0;position:fixed;inset:0;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:var(--night);color:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--ui)}
+#stage{position:fixed;left:0;top:0;width:100%;height:100%;overflow:hidden;background:var(--night);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+#stage.rot{transform-origin:0 0;transform:rotate(90deg) translateY(-100%);--sl:env(safe-area-inset-top,0px);--sr:env(safe-area-inset-bottom,0px);--sb:0px;--st:0px}
 #game{position:absolute;left:0;top:0;width:100%;height:100%}
 #game canvas{display:block;width:100%!important;height:100%!important;margin:0!important}
 
 /* HUD */
-#hud{position:absolute;left:0;right:0;top:0;padding:10px 14px;display:flex;align-items:flex-start;gap:12px;z-index:3;pointer-events:none}
+#hud{position:absolute;left:0;right:0;top:0;padding:calc(10px + var(--st)) calc(14px + var(--sr)) 10px calc(14px + var(--sl));display:flex;align-items:flex-start;gap:12px;z-index:3;pointer-events:none}
 .pcard{display:flex;align-items:center;gap:10px}
 .face{width:54px;height:54px;border-radius:12px;border:2px solid var(--gold);background:#000 center/cover;box-shadow:0 0 0 3px rgba(242,178,58,.18),0 6px 14px rgba(0,0,0,.5)}
 .bars{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -52,27 +52,27 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overfl
 .score{margin-left:auto;margin-right:96px;text-align:right}
 .score b{display:block;font:800 22px/1 var(--display);font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
 .score span{font:600 10px/1 var(--ui);letter-spacing:.22em;color:var(--mute)}
-#combo{position:absolute;right:22px;top:78px;z-index:3;text-align:right;pointer-events:none;opacity:0;transition:opacity .2s}
+#combo{position:absolute;right:calc(22px + var(--sr));top:78px;z-index:3;text-align:right;pointer-events:none;opacity:0;transition:opacity .2s}
 #combo b{display:block;font:900 44px/1 var(--display);color:var(--gold);text-shadow:0 3px 0 #000,0 0 18px rgba(242,178,58,.6)}
 #combo span{font:800 11px/1 var(--display);letter-spacing:.3em}
-#buff{position:absolute;left:16px;top:76px;z-index:3;font:700 11px/1 var(--ui);letter-spacing:.14em;color:var(--teal);text-shadow:0 2px 0 #000;pointer-events:none}
+#buff{position:absolute;left:calc(16px + var(--sl));top:76px;z-index:3;font:700 11px/1 var(--ui);letter-spacing:.14em;color:var(--teal);text-shadow:0 2px 0 #000;pointer-events:none}
 #boss{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;width:min(560px,60vw);display:flex;align-items:center;gap:10px;pointer-events:none}
 #boss .face{width:44px;height:44px;border-color:var(--ember)}
 #boss .bar{width:100%;height:14px}
 #boss .bar i{background:linear-gradient(90deg,#ff7a2f,#ffd36b)}
 #boss .nm{margin-bottom:5px}
-#go{position:absolute;right:28px;top:46%;z-index:3;font:900 34px/1 var(--display);color:var(--gold);text-shadow:0 3px 0 #000;pointer-events:none;animation:go .6s infinite alternate}
+#go{position:absolute;right:calc(28px + var(--sr));top:46%;z-index:3;font:900 34px/1 var(--display);color:var(--gold);text-shadow:0 3px 0 #000;pointer-events:none;animation:go .6s infinite alternate}
 @keyframes go{to{transform:translateX(12px)}}
 
-.top{position:absolute;top:10px;right:12px;display:flex;gap:8px;z-index:6}
+.top{position:absolute;top:calc(10px + var(--st));right:calc(12px + var(--sr));display:flex;gap:8px;z-index:6}
 .ic{width:38px;height:38px;border-radius:10px;border:1.5px solid rgba(247,238,223,.35);background:rgba(11,7,20,.55);color:var(--paper);display:grid;place-items:center;cursor:pointer}
 .ic svg{width:18px;height:18px}
 
 /* Commandes tactiles */
-#joy{position:absolute;left:24px;bottom:22px;width:136px;height:136px;border-radius:50%;z-index:4;display:none;touch-action:none;background:radial-gradient(circle,rgba(11,7,20,.2) 0 38%,rgba(11,7,20,.5) 39%);border:2px solid rgba(247,238,223,.3)}
+#joy{position:absolute;left:calc(24px + var(--sl));bottom:calc(22px + var(--sb));width:136px;height:136px;border-radius:50%;z-index:4;display:none;touch-action:none;background:radial-gradient(circle,rgba(11,7,20,.2) 0 38%,rgba(11,7,20,.5) 39%);border:2px solid rgba(247,238,223,.3)}
 body.touch.playing #joy{display:block}
 #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd36b,#b9761a 70%);border:2px solid rgba(255,255,255,.7);box-shadow:0 6px 14px rgba(0,0,0,.5)}
-.pad{position:absolute;right:18px;bottom:16px;z-index:4;display:none;grid-template-columns:auto auto auto;grid-template-rows:auto auto;gap:9px;align-items:center;justify-items:center}
+.pad{position:absolute;right:calc(18px + var(--sr));bottom:calc(16px + var(--sb));z-index:4;display:none;grid-template-columns:auto auto auto;grid-template-rows:auto auto;gap:9px;align-items:center;justify-items:center}
 body.touch.playing .pad{display:grid}
 .btn{width:62px;height:62px;border-radius:50%;border:2px solid rgba(247,238,223,.45);background:rgba(11,7,20,.42);color:var(--paper);font:700 10px/1.1 var(--ui);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;text-align:center;touch-action:none;transition:transform .05s}
 #bAtk{width:86px;height:86px;grid-column:3;grid-row:1/3;border-color:var(--gold);color:var(--gold);font-size:12px}
@@ -166,4 +166,4 @@ h1 em{font-style:normal;color:var(--gold)}
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=3" charset="utf-8"></script>
+<script src="game.js?v=4" charset="utf-8"></script>
