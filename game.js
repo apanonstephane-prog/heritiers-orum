@@ -1308,7 +1308,7 @@ function radioTick(dt) {
 }
 function cutscene(lines, cb) {
   talkQ = lines.slice(); talkCb = cb; state = 'talk'; document.body.classList.remove('playing');
-  $('radio').classList.remove('on'); $('talk').hidden = false; nextTalk();
+  $('radio').classList.remove('on'); $('tip').hidden = true; tipT = 0; $('talk').hidden = false; nextTalk();
 }
 function nextTalk() {
   if (talkTyping) { clearInterval(talkTyping); talkTyping = 0; $('tt').textContent = $('tt').dataset.full; return; }
