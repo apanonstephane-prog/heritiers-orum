@@ -131,16 +131,21 @@ class Play extends Phaser.Scene {
   preload() {
     const bar = $('lbar');
     this.load.on('progress', v => bar.style.width = Math.round(v * 100) + '%');
-    this.load.json('atlas', 'atlas_main.json'); this.load.json('stage', 'stage.json'); this.load.json('props', 'props.json');
-    for (let i = 0; i < 3; i++) this.load.image('m' + i, 'atlas_main_' + i + '.webp');
+    // décor d'abord (léger), puis les planches d'animation ; version allégée sur mobile (≈100 Mo de mémoire graphique au lieu de ≈300)
+    this.load.json('stage', 'stage.json'); this.load.json('props', 'props.json'); this.load.json('atlas', ATL.main + '.json');
     for (let i = 0; i < 3; i++) this.load.image('st' + i, 'stage_' + i + '.webp');
     this.load.image('sky', 'st_sky.webp'); this.load.image('fg', 'st_fg.webp'); this.load.image('props', 'props.webp');
+    for (let i = 0; i < ATL.mainPages; i++) this.load.image('m' + i, ATL.main + '_' + i + '.webp');
+    this.load.on('loaderror', f => { LOADERR.push(f.key); });
   }
   create() {
     SC = this;
+    const need = ['atlas', 'stage', 'st0', 'st1', 'st2'].concat(Array.from({ length: ATL.mainPages }, (_, i) => 'm' + i));
+    const miss = need.filter(k => !(this.textures.exists(k) || this.cache.json.exists(k)));
+    if (miss.length) { $('loading').innerHTML = '<div>Chargement incomplet (' + miss.join(', ') + ')<br><br><button class="go" onclick="location.reload()">Réessayer</button></div>'; return; }
     this.META = {}; regAtlas(this, this.cache.json.get('atlas'), 'm');
     // atlas du boss chargé en arrière-plan pendant que l'on joue
-    this.load.json('atlasB', 'atlas_boss.json'); this.load.image('b0', 'atlas_boss_0.webp');
+    this.load.json('atlasB', ATL.boss + '.json'); this.load.image('b0', ATL.boss + '_0.webp');
     this.load.once('complete', () => { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; });
     this.load.start();
     const P = this.cache.json.get('props'); this.PROPS = P;
@@ -156,9 +161,11 @@ class Play extends Phaser.Scene {
 
     // décor
     const ST = this.cache.json.get('stage'); let x = 0;
-    this.sky = this.add.tileSprite(0, 0, VW, VH, 'sky').setOrigin(0).setScrollFactor(0).setDepth(-20); this.sky.tileScaleX = this.sky.tileScaleY = VH / 960;
+    // ciel : une seule image en parallaxe lente (pas de TileSprite, fragile sur iOS)
+    if (this.textures.exists('sky')) { const k = Math.max(VH / 960, (VW + WORLD_W * .1 + 20) / 2240); this.add.image(0, -(960 * k - VH) * .4, 'sky').setOrigin(0).setScale(k).setScrollFactor(.1).setDepth(-20); }
     for (let i = 0; i < ST.parts.length; i++) { const im = this.add.image(x, 0, 'st' + i).setOrigin(0).setScale(1 / ST.scale).setDepth(-10); x += im.displayWidth; }
-    this.fg = this.add.tileSprite(0, 0, VW, VH, 'fg').setOrigin(0).setScrollFactor(0).setDepth(9000).setAlpha(.9); this.fg.tileScaleX = this.fg.tileScaleY = VH / 960;
+    // premier plan : copies juxtaposées en parallaxe rapide
+    if (this.textures.exists('fg')) { const k = VH / 960, w = 2240 * k; for (let i = 0; i * w < WORLD_W * 1.3 + VW; i++) this.add.image(i * w, 0, 'fg').setOrigin(0).setScale(k).setScrollFactor(1.3).setDepth(9000).setAlpha(.9); }
     this.tele = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
     this.fxg = this.add.graphics().setDepth(8000).setBlendMode(Phaser.BlendModes.ADD);
     this.bars = this.add.graphics().setDepth(8500);
@@ -185,7 +192,9 @@ class Play extends Phaser.Scene {
   update(time, delta) { tick(Math.min(delta, 50) / 1000); }
 }
 
-let BOSS_READY = false;
+let BOSS_READY = false; const LOADERR = [];
+const LITE = touch || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+const ATL = LITE ? { main: 'atlas_mmain', mainPages: 2, boss: 'atlas_mboss' } : { main: 'atlas_main', mainPages: 3, boss: 'atlas_boss' };
 function regAtlas(sc, A, tp) {
   for (const c in A.chars) {
     const C = A.chars[c]; C.tp = tp; sc.META[c] = C;
@@ -854,8 +863,6 @@ function camera(dt) {
   G.cam += (target - G.cam) * Math.min(1, dt * (G.lock != null ? 3 : 5));
   G.cam = Math.max(G.cam, G.camMin);
   cam.setScroll(Math.round(G.cam * 100) / 100, 0);
-  SC.sky.tilePositionX = G.cam * .1 / (VH / 960);
-  SC.fg.tilePositionX = G.cam * 1.3 / (VH / 960);
   if (G.goT > 0) { G.goT -= dt; if (G.goT <= 0) $('go').hidden = true; }
 }
 
@@ -901,7 +908,7 @@ function drawAll() {
 }
 function demoTick(dt) {
   G.t += dt; const p = G.p; animStep(p, dt); p.x = 300; p.face = 1; drawAll();
-  SC.cameras.main.setScroll(0, 0); SC.sky.tilePositionX += dt * 8;
+  SC.cameras.main.setScroll(0, 0);
 }
 
 /* ---------- Conseils contextuels (une fois par appareil) ---------- */
