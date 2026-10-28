@@ -1,11 +1,20 @@
 {
   "headers": [
     {
-      "source": "/(.*)\\.(webp|json|js|png|jpg)",
+      "source": "/(.*)\\.(webp|png|jpg)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js|json|html|webmanifest)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
