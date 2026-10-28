@@ -1,0 +1,150 @@
+<meta charset="utf-8">
+<title>Les Héritiers d'Orun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800;900&family=Sora:wght@400;600;700&display=swap">
+<style>
+/* Layout : jeu Phaser plein écran (paysage), HUD DOM net par-dessus, commandes tactiles aux pouces, écrans narratifs */
+:root{
+  --night:#0b0714; --ink:#140c22; --gold:#f2b23a; --teal:#2fe0d0; --violet:#9a5cff; --ember:#ff7a2f; --paper:#f7eedf; --mute:#c9b8d8; --red:#ff3d5a;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --ui:"Sora","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--ui)}
+#stage{position:fixed;left:0;top:0;width:100%;height:100%;overflow:hidden;background:var(--night)}
+#stage.rot{transform-origin:0 0;transform:rotate(90deg) translateY(-100%)}
+#game{position:absolute;left:0;top:0;width:100%;height:100%}
+#game canvas{display:block;width:100%!important;height:100%!important;margin:0!important}
+
+/* HUD */
+#hud{position:absolute;left:0;right:0;top:0;padding:10px 14px;display:flex;align-items:flex-start;gap:12px;z-index:3;pointer-events:none}
+.pcard{display:flex;align-items:center;gap:10px}
+.face{width:54px;height:54px;border-radius:12px;border:2px solid var(--gold);background:#000 center/cover;box-shadow:0 0 0 3px rgba(242,178,58,.18),0 6px 14px rgba(0,0,0,.5)}
+.bars{display:flex;flex-direction:column;gap:5px;min-width:0}
+.nm{font:800 12px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000}
+.nm small{font:600 10px/1 var(--ui);letter-spacing:.18em;color:var(--gold);margin-left:6px}
+.bar{position:relative;width:min(240px,30vw);height:12px;background:rgba(10,6,20,.75);border:1px solid rgba(247,238,223,.35);border-radius:3px;overflow:hidden;transform:skewX(-14deg)}
+.bar i{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#ff3d5a,#ff9a4d);transition:width .15s}
+.bar b{position:absolute;inset:0;width:100%;background:rgba(255,255,255,.55);transition:width .6s .2s}
+.bar.en{height:8px;width:min(190px,24vw)}
+.bar.en i{background:linear-gradient(90deg,#2fe0d0,#8ef7ff)}
+.bar.en.full i{animation:pulse .6s infinite alternate}
+@keyframes pulse{to{filter:brightness(1.6)}}
+.score{margin-left:auto;margin-right:96px;text-align:right}
+.score b{display:block;font:800 22px/1 var(--display);font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
+.score span{font:600 10px/1 var(--ui);letter-spacing:.22em;color:var(--mute)}
+#combo{position:absolute;right:22px;top:78px;z-index:3;text-align:right;pointer-events:none;opacity:0;transition:opacity .2s}
+#combo b{display:block;font:900 44px/1 var(--display);color:var(--gold);text-shadow:0 3px 0 #000,0 0 18px rgba(242,178,58,.6)}
+#combo span{font:800 11px/1 var(--display);letter-spacing:.3em}
+#buff{position:absolute;left:16px;top:76px;z-index:3;font:700 11px/1 var(--ui);letter-spacing:.14em;color:var(--teal);text-shadow:0 2px 0 #000;pointer-events:none}
+#boss{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;width:min(560px,60vw);display:flex;align-items:center;gap:10px;pointer-events:none}
+#boss .face{width:44px;height:44px;border-color:var(--ember)}
+#boss .bar{width:100%;height:14px}
+#boss .bar i{background:linear-gradient(90deg,#ff7a2f,#ffd36b)}
+#boss .nm{margin-bottom:5px}
+#go{position:absolute;right:28px;top:46%;z-index:3;font:900 34px/1 var(--display);color:var(--gold);text-shadow:0 3px 0 #000;pointer-events:none;animation:go .6s infinite alternate}
+@keyframes go{to{transform:translateX(12px)}}
+
+.top{position:absolute;top:10px;right:12px;display:flex;gap:8px;z-index:6}
+.ic{width:38px;height:38px;border-radius:10px;border:1.5px solid rgba(247,238,223,.35);background:rgba(11,7,20,.55);color:var(--paper);display:grid;place-items:center;cursor:pointer}
+.ic svg{width:18px;height:18px}
+
+/* Commandes tactiles */
+#joy{position:absolute;left:24px;bottom:22px;width:136px;height:136px;border-radius:50%;z-index:4;display:none;touch-action:none;background:radial-gradient(circle,rgba(11,7,20,.2) 0 38%,rgba(11,7,20,.5) 39%);border:2px solid rgba(247,238,223,.3)}
+body.touch.playing #joy{display:block}
+#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd36b,#b9761a 70%);border:2px solid rgba(255,255,255,.7);box-shadow:0 6px 14px rgba(0,0,0,.5)}
+.pad{position:absolute;right:18px;bottom:16px;z-index:4;display:none;grid-template-columns:auto auto auto;grid-template-rows:auto auto;gap:9px;align-items:center;justify-items:center}
+body.touch.playing .pad{display:grid}
+.btn{width:62px;height:62px;border-radius:50%;border:2px solid rgba(247,238,223,.45);background:rgba(11,7,20,.42);color:var(--paper);font:700 10px/1.1 var(--ui);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;text-align:center;touch-action:none;transition:transform .05s}
+#bAtk{width:86px;height:86px;grid-column:3;grid-row:1/3;border-color:var(--gold);color:var(--gold);font-size:12px}
+#bJump{grid-column:2;grid-row:2}
+#bDash{grid-column:1;grid-row:2}
+#bPow{grid-column:2;grid-row:1;border-color:var(--teal);color:var(--teal)}
+.btn.on{transform:scale(.92);background:rgba(242,178,58,.45)}
+
+/* Écrans */
+.screen{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at 50% 60%,rgba(11,7,20,.3),rgba(11,7,20,.92));overflow:auto}
+#title{background:linear-gradient(90deg,rgba(11,7,20,.92) 0%,rgba(11,7,20,.55) 46%,rgba(11,7,20,.1) 75%),var(--night) center/cover;place-items:center start}
+.tc{display:flex;flex-direction:column;gap:12px;max-width:min(520px,100%);padding-left:clamp(4px,4vw,56px)}
+.eyebrow{font:700 11px/1 var(--ui);letter-spacing:.45em;color:var(--gold);text-transform:uppercase}
+h1{margin:0;font:900 clamp(30px,6vw,58px)/.95 var(--display);letter-spacing:-.01em;text-wrap:balance;text-shadow:0 4px 0 rgba(0,0,0,.4),0 0 40px rgba(242,178,58,.25)}
+h1 em{font-style:normal;color:var(--gold)}
+.tag{margin:0;font:400 15px/1.5 var(--ui);color:var(--mute);max-width:44ch}
+.keys{display:flex;flex-wrap:wrap;gap:6px 14px;font:400 12.5px/1.3 var(--ui);color:var(--mute)}
+.keys b{font-weight:700;color:var(--paper);border:1px solid rgba(247,238,223,.35);border-radius:5px;padding:1px 6px;margin-right:5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.go{font:800 16px/1 var(--display);letter-spacing:.04em;color:var(--night);background:var(--gold);border:0;border-radius:999px;padding:14px 30px;cursor:pointer;box-shadow:0 4px 0 #8a5a12}
+.go:active{transform:translateY(3px);box-shadow:0 1px 0 #8a5a12}
+.go.ghost{background:transparent;color:var(--paper);box-shadow:none;border:1.5px solid rgba(247,238,223,.4);font:700 13px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase}
+.go:focus-visible,.ic:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.card{max-width:min(640px,100%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.story p{margin:0;font:400 clamp(15px,2.2vw,19px)/1.6 var(--ui);color:var(--paper);text-wrap:pretty}
+.story .eyebrow{color:var(--teal)}
+.dots{display:flex;gap:6px}.dots i{width:7px;height:7px;border-radius:50%;background:rgba(247,238,223,.25)}.dots i.on{background:var(--gold)}
+.big{font:900 54px/1 var(--display);font-variant-numeric:tabular-nums;margin:0}
+.sub{font:400 14px/1.4 var(--ui);color:var(--mute);margin:0}
+#bossIntro{background:rgba(11,7,20,.55);pointer-events:none}
+#bossIntro .card{gap:6px}
+#bossIntro h2{margin:0;font:900 clamp(30px,6vw,56px)/1 var(--display);color:var(--ember);text-shadow:0 4px 0 #000}
+#loading{position:absolute;inset:0;z-index:9;display:grid;place-items:center;background:var(--night);font:700 12px/1 var(--ui);letter-spacing:.3em;color:var(--mute);text-transform:uppercase;text-align:center}
+#loading span{display:block;margin:14px auto 0;height:2px;width:180px;background:rgba(247,238,223,.15)}
+#loading span i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
+@media (prefers-reduced-motion:reduce){#go{animation:none}}
+</style>
+
+<div id="stage">
+  <div id="game"></div>
+
+  <div id="hud" hidden>
+    <div class="pcard"><div class="face" id="pFace"></div>
+      <div class="bars"><div class="nm">Amara <small>Lame-tempête</small></div><div class="bar" id="hpBar"><b></b><i></i></div><div class="bar en" id="enBar"><i></i></div></div></div>
+    <div class="score"><span>Score</span><b id="score">000000</b></div>
+  </div>
+  <div id="combo"><b id="comboN">0</b><span>COMBO</span></div>
+  <div id="buff" hidden></div>
+  <div id="go" hidden>GO ▶</div>
+  <div id="boss" hidden><div class="face" id="bFace"></div><div style="flex:1;min-width:0"><div class="nm">Oba Ferrum <small id="bPhase">Colosse-Réacteur</small></div><div class="bar" id="bossBar"><b></b><i></i></div></div></div>
+
+  <div class="top">
+    <button class="ic" id="bPause" aria-label="Pause" hidden><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+    <button class="ic" id="bMute" aria-label="Couper le son"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path id="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+  </div>
+
+  <div id="joy" aria-label="Joystick"><div id="knob"></div></div>
+  <div class="pad">
+    <button class="btn" id="bPow">Tempête</button>
+    <button class="btn" id="bDash">Esquive</button>
+    <button class="btn" id="bJump">Saut</button>
+    <button class="btn" id="bAtk">Frappe</button>
+  </div>
+
+  <div class="screen" id="title" hidden>
+    <div class="tc">
+      <span class="eyebrow">Acte I · Les Quartiers suspendus</span>
+      <h1>Les Héritiers <em>d'Orun</em></h1>
+      <p class="tag">Nova-Kemet tombe. Sombre-Lune vide les Orishas-machines qui la portent. Amara, lame-tempête des Gardiens, descend vers le cœur du Marché Haut.</p>
+      <div class="keys" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>K</b>saut</span><span><b>L</b>Tempête</span><span><b>Maj</b>esquive</span></div>
+      <div class="row"><button class="go" id="bStart">Commencer</button><span class="sub" id="best"></span></div>
+    </div>
+  </div>
+
+  <div class="screen story" id="story" hidden>
+    <div class="card"><span class="eyebrow" id="stEy">Nova-Kemet · 2311</span><p id="stTx"></p><div class="dots" id="stDots"></div>
+      <div class="row"><button class="go" id="bNext">Continuer</button><button class="go ghost" id="bSkip">Passer</button></div></div>
+  </div>
+
+  <div class="screen" id="bossIntro" hidden><div class="card"><span class="eyebrow" style="color:var(--ember)">Gardien du Marché Haut</span><h2>Oba Ferrum</h2><p class="sub">Le Colosse-Réacteur, enchaîné par Sombre-Lune.</p></div></div>
+
+  <div class="screen" id="pause" hidden><div class="card"><span class="eyebrow">Pause</span><div class="row"><button class="go" id="bResume">Reprendre</button><button class="go ghost" id="bQuit">Menu</button></div></div></div>
+
+  <div class="screen" id="over" hidden>
+    <div class="card"><span class="eyebrow" id="ovEy">Amara est tombée</span><p class="big" id="ovScore">0</p><p class="sub" id="ovSub"></p>
+      <div class="row"><button class="go" id="bRetry">Reprendre au dernier point</button><button class="go ghost" id="bMenu">Menu</button></div></div>
+  </div>
+
+  <div id="loading"><div>Nova-Kemet se charge<span><i id="lbar"></i></span></div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="game.js" charset="utf-8"></script>
