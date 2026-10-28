@@ -17,6 +17,11 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 
 3 vies par crédit, 2 crédits de reprise au dernier point de contrôle.
 
+## Musique et scénario
+- `MUSIC.md` : les 11 morceaux à produire (6 pour l'Acte I), avec tempos, synchro de l'intro et prompts. Dépose les fichiers dans `music/` et liste-les dans `music/music.json` (`available`, `loops`) : le jeu les utilise à la place de la musique procédurale.
+- `STORY.md` : bible narrative (monde, personnages, 3 actes, 3 boss).
+- `intro/` : cinématique (8 plans Higgsfield, dont 4 animés avec Kling 4.0).
+
 ## Structure
 - `index.html` : HUD, écrans, commandes tactiles. `game.js` : moteur (animation, IA, combat, boss, audio procédural).
 - `atlas_main_*` (Amara + 5 ennemis) chargés au démarrage ; `atlas_boss_*` chargé en arrière-plan.
