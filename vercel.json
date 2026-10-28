@@ -1,6 +1,22 @@
 {
   "headers": [
-    { "source": "/(.*)\\.(webp|json)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
-    { "source": "/(.*)", "headers": [{ "key": "Content-Security-Policy", "value": "frame-ancestors *" }] }
+    {
+      "source": "/(.*)\\.(webp|json|js|png|jpg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
+        }
+      ]
+    }
   ]
 }

@@ -1,5 +1,20 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Les Héritiers d'Orun</title>
+<meta name="description" content="Beat 'em up 2.5D afro-futuriste gratuit : Amara, lame-tempête des Gardiens, affronte la milice Sombre-Lune dans les quartiers suspendus de Nova-Kemet.">
+<meta name="theme-color" content="#0b0714">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Orun">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Les Héritiers d'Orun — Acte I">
+<meta property="og:description" content="Beat 'em up 2.5D afro-futuriste, jouable gratuitement sur mobile et ordinateur.">
+<meta property="og:image" content="https://heritiers-orun.vercel.app/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800;900&family=Sora:wght@400;600;700&display=swap">
 <style>
@@ -23,6 +38,9 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);overfl
 .face{width:54px;height:54px;border-radius:12px;border:2px solid var(--gold);background:#000 center/cover;box-shadow:0 0 0 3px rgba(242,178,58,.18),0 6px 14px rgba(0,0,0,.5)}
 .bars{display:flex;flex-direction:column;gap:5px;min-width:0}
 .nm{font:800 12px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000}
+.lives{margin-left:8px;color:var(--red);letter-spacing:.12em;font-size:11px}
+#tip{position:absolute;left:50%;top:84px;transform:translateX(-50%);z-index:4;max-width:min(560px,80vw);padding:9px 16px;border-radius:999px;background:rgba(11,7,20,.78);border:1px solid rgba(47,224,208,.5);font:600 13px/1.35 var(--ui);color:var(--paper);text-align:center;pointer-events:none;transition:opacity .3s}
+#tip b{color:var(--teal)}
 .nm small{font:600 10px/1 var(--ui);letter-spacing:.18em;color:var(--gold);margin-left:6px}
 .bar{position:relative;width:min(240px,30vw);height:12px;background:rgba(10,6,20,.75);border:1px solid rgba(247,238,223,.35);border-radius:3px;overflow:hidden;transform:skewX(-14deg)}
 .bar i{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#ff3d5a,#ff9a4d);transition:width .15s}
@@ -98,12 +116,13 @@ h1 em{font-style:normal;color:var(--gold)}
 
   <div id="hud" hidden>
     <div class="pcard"><div class="face" id="pFace"></div>
-      <div class="bars"><div class="nm">Amara <small>Lame-tempête</small></div><div class="bar" id="hpBar"><b></b><i></i></div><div class="bar en" id="enBar"><i></i></div></div></div>
+      <div class="bars"><div class="nm">Amara <small>Lame-tempête</small><span class="lives" id="lives"></span></div><div class="bar" id="hpBar"><b></b><i></i></div><div class="bar en" id="enBar"><i></i></div></div></div>
     <div class="score"><span>Score</span><b id="score">000000</b></div>
   </div>
   <div id="combo"><b id="comboN">0</b><span>COMBO</span></div>
   <div id="buff" hidden></div>
   <div id="go" hidden>GO ▶</div>
+  <div id="tip" hidden></div>
   <div id="boss" hidden><div class="face" id="bFace"></div><div style="flex:1;min-width:0"><div class="nm">Oba Ferrum <small id="bPhase">Colosse-Réacteur</small></div><div class="bar" id="bossBar"><b></b><i></i></div></div></div>
 
   <div class="top">
@@ -124,7 +143,7 @@ h1 em{font-style:normal;color:var(--gold)}
       <span class="eyebrow">Acte I · Les Quartiers suspendus</span>
       <h1>Les Héritiers <em>d'Orun</em></h1>
       <p class="tag">Nova-Kemet tombe. Sombre-Lune vide les Orishas-machines qui la portent. Amara, lame-tempête des Gardiens, descend vers le cœur du Marché Haut.</p>
-      <div class="keys" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>K</b>saut</span><span><b>L</b>Tempête</span><span><b>Maj</b>esquive</span></div>
+      <div class="keys" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>K</b>saut</span><span><b>L</b>Tempête</span><span><b>Maj</b>esquive</span><span><b>Contre un ennemi</b>prise · J genou · K projection</span><span><b>Manette</b>compatible</span></div>
       <div class="row"><button class="go" id="bStart">Commencer</button><span class="sub" id="best"></span></div>
     </div>
   </div>
@@ -134,7 +153,7 @@ h1 em{font-style:normal;color:var(--gold)}
       <div class="row"><button class="go" id="bNext">Continuer</button><button class="go ghost" id="bSkip">Passer</button></div></div>
   </div>
 
-  <div class="screen" id="bossIntro" hidden><div class="card"><span class="eyebrow" style="color:var(--ember)">Gardien du Marché Haut</span><h2>Oba Ferrum</h2><p class="sub">Le Colosse-Réacteur, enchaîné par Sombre-Lune.</p></div></div>
+  <div class="screen" id="bossIntro" hidden><div class="card"><span class="eyebrow" style="color:var(--ember)">Gardien du Marché Haut</span><h2>Oba Ferrum</h2><p class="sub">Le Colosse-Réacteur, enchaîné par Sombre-Lune.</p><p class="sub" style="color:var(--paper)">« Gardienne… brise mes chaînes… ou tombe avec moi. »</p></div></div>
 
   <div class="screen" id="pause" hidden><div class="card"><span class="eyebrow">Pause</span><div class="row"><button class="go" id="bResume">Reprendre</button><button class="go ghost" id="bQuit">Menu</button></div></div></div>
 
@@ -146,5 +165,5 @@ h1 em{font-style:normal;color:var(--gold)}
   <div id="loading"><div>Nova-Kemet se charge<span><i id="lbar"></i></span></div></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="phaser.min.js"></script>
 <script src="game.js" charset="utf-8"></script>
