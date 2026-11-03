@@ -39,7 +39,7 @@ html,body{height:100%;margin:0;position:fixed;inset:0;overscroll-behavior:none;-
 .bars{display:flex;flex-direction:column;gap:5px;min-width:0}
 .nm{font:800 12px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000}
 .lives{margin-left:8px;color:var(--red);letter-spacing:.12em;font-size:11px}
-#tip{position:absolute;left:50%;top:84px;transform:translateX(-50%);z-index:4;max-width:min(560px,80vw);padding:9px 16px;border-radius:999px;background:rgba(11,7,20,.78);border:1px solid rgba(47,224,208,.5);font:600 13px/1.35 var(--ui);color:var(--paper);text-align:center;pointer-events:none;transition:opacity .3s}
+#tip{position:absolute;left:50%;top:calc(84px + var(--st));transform:translateX(-50%);z-index:4;max-width:min(560px,80vw);padding:9px 16px;border-radius:999px;background:rgba(11,7,20,.78);border:1px solid rgba(47,224,208,.5);font:600 13px/1.35 var(--ui);color:var(--paper);text-align:center;pointer-events:none;transition:opacity .3s}
 #tip b{color:var(--teal)}
 .rank{margin-left:8px;color:var(--gold);letter-spacing:.05em;font-size:11px}
 .wpn{font:700 10px/1 var(--ui);letter-spacing:.14em;color:var(--teal);text-shadow:0 2px 0 #000}
@@ -57,7 +57,13 @@ html,body{height:100%;margin:0;position:fixed;inset:0;overscroll-behavior:none;-
 .bar.en i{background:linear-gradient(90deg,#2fe0d0,#8ef7ff)}
 .bar.en.full i{animation:pulse .6s infinite alternate}
 @keyframes pulse{to{filter:brightness(1.6)}}
-.score{margin-left:auto;margin-right:96px;text-align:right}
+.score{margin-left:auto;margin-right:calc(96px + var(--sr));text-align:right;flex:none}
+/* à deux joueurs, les cartes se resserrent pour laisser le score lisible */
+#hud.duo .bar{width:min(200px,19vw)}#hud.duo .bar.en{width:min(160px,15vw)}#hud.duo .face{width:44px;height:44px}
+#hud.duo .pcard{gap:7px}#hud.duo .nm small{display:none}
+@media (max-width:900px){#hud.duo .score b{font-size:17px}#hud.duo .score{margin-right:calc(88px + var(--sr))}}
+/* tactile : barre du boss entre le joystick et les boutons */
+body.touch #boss{width:min(360px,34vw)}
 .score b{display:block;font:800 22px/1 var(--display);font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
 .score span{font:600 10px/1 var(--ui);letter-spacing:.22em;color:var(--mute)}
 #combo{position:absolute;right:calc(22px + var(--sr));top:78px;z-index:3;text-align:right;pointer-events:none;opacity:0;transition:opacity .2s}
@@ -234,4 +240,4 @@ h1 em{font-style:normal;color:var(--gold)}
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=8" charset="utf-8"></script>
+<script src="game.js?v=10" charset="utf-8"></script>
