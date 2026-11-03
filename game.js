@@ -4,10 +4,10 @@
 const $ = id => document.getElementById(id);
 const touch = matchMedia('(pointer:coarse)').matches;
 document.body.classList.toggle('touch', touch);
-if (touch) $('keys').innerHTML = '<span><b>Joystick</b>8 directions</span><span><b>Frappe</b>combo en 3 coups</span><span><b>Pied</b>renverse · bas = balayage</span><span><b>Saut</b>+ Frappe en l\'air</span><span><b>Tempête</b>jauge turquoise</span><span><b>Esquive</b>ruée invincible</span>';
+if (touch) $('keys').innerHTML = '<span><b>Joystick</b>8 directions</span><span><b>Frappe</b>combo en 3 coups</span><span><b>Pied</b>renverse · bas = balayage</span><span><b>Saut</b>+ Frappe en l\'air</span><span><b>Supers</b>jauge d\'énergie</span><span><b>Esquive</b>ruée invincible</span>';
 
 const VW = 960, VH = 540;
-const AV = '?v=28'; // version des ressources : à incrémenter à chaque mise à jour des atlas (sinon cache navigateur = images décalées)
+const AV = '?v=29'; // version des ressources : à incrémenter à chaque mise à jour des atlas (sinon cache navigateur = images décalées)
 const rnd = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -22,6 +22,7 @@ function fitStage() {
   try { inp.jx = inp.jy = 0; $('knob').style.transform = ''; } catch (e) {}
   window.scrollTo(0, 0);
   const st = $('stage'); st.classList.toggle('rot', ROT); if (ROT) [w, h] = [h, w];
+  document.documentElement.classList.toggle('short', h < 520);
   st.style.width = w + 'px'; st.style.height = h + 'px';
   const k = Math.min(w / VW, h / VH), gw = VW * k, gh = VH * k, gs = $('game').style;
   gs.width = gw + 'px'; gs.height = gh + 'px'; gs.left = (w - gw) / 2 + 'px'; gs.top = (h - gh) / 2 + 'px';
@@ -33,7 +34,7 @@ addEventListener('resize', refit); addEventListener('orientationchange', refit);
 if (window.visualViewport) visualViewport.addEventListener('resize', refit);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refit(); });
 // pas de défilement, de rebond ni de zoom par pincement/double-tape
-document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => { if (!(e.target.closest && e.target.closest('.cbox'))) e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 fitStage();
@@ -259,7 +260,7 @@ const LEVELS = [
       ['Nyx Adébayo', 'Nyx fut la plus grande des Gardiennes, et la maîtresse d\'armes d\'Amara. Elle a vu les quartiers tomber et a choisi de sauver ce qui pouvait l\'être, quel qu\'en soit le prix.'],
       ['Les héritiers', 'Kofi tient la base de la tour, Zuri brouille les défenses. Amara monte seule vers le sommet.']
     ],
-    end: ['Fin', 'Amara ne détruit pas Ọ̀run-Zéro : elle coupe les chaînes de tous les esprits à la fois. La cité ne tombe pas, elle descend lentement, portée par des esprits enfin libres. Nyx, à genoux, regarde Nova-Kemet se poser sur les nuages. « Tu avais raison, Amara. On ne possède pas un esprit… on le porte. »']
+    end: ['Fin', 'Amara ne détruit pas Ọ̀run-Zéro : {elle|il} coupe les chaînes de tous les esprits à la fois. La cité ne tombe pas, elle descend lentement, portée par des esprits enfin libres. Nyx, à genoux, regarde Nova-Kemet se poser sur les nuages. « Tu avais raison, Amara. On ne possède pas un esprit… on le porte. »']
   }
 
 ];
@@ -289,11 +290,49 @@ const HEROES = {
   toussaint: {  b1: 'Cyclone', b2: 'Vague',name: 'Toussaint', face: 'face_toussaint.webp', col: 0x4fb0ff, css: '#4fb0ff', em: 'pWater', hp: 130, spd: .86, dmg: 1.2, aspd: .9, reach: 1, grab: 1.6, role: 'Lutteur · prises et projections', s1: 'Cyclone', s2: 'Raz-de-marée' }
 };
 const HERO_IDS = Object.keys(HEROES);
+/* ---------- Distribution des dialogues : le héros de J1 devient le protagoniste ---------- */
+const GENDER = { amara: 'f', zuri: 'f', solea: 'f', kofi: 'm', kenzo: 'm', toussaint: 'm' };
+const BIO = {
+  amara: ['Amara Diallo', 'Dernière lame-tempête de la lignée des Gardiens, Amara descend vers le Marché Haut.'],
+  kofi: ['Kofi Mensah', 'Forgeron-boxeur des docks et frère d\'armes des Gardiens, Kofi descend vers le Marché Haut, son marteau à vapeur sur l\'épaule.'],
+  zuri: ['Zuri Okafor', 'Technomancienne et oracle des masques, Zuri descend vers le Marché Haut pour écouter ce que les esprits n\'osent plus dire.'],
+  kenzo: ['Kenzo', 'Héritier oublié venu des îles, de l\'autre côté de la planète, Kenzo frappe au rythme du tambour : le danmyé est sa langue de combat.'],
+  solea: ['Soléa', 'Héritière oubliée venue des îles, de l\'autre côté de la planète, Soléa danse avec deux coutelas chauffés au feu des volcans.'],
+  toussaint: ['Toussaint', 'Héritier oublié venu des îles, de l\'autre côté de la planète, Toussaint est un lutteur : ce qu\'il attrape, il le renvoie à la mer.']
+};
+const ALLY_BIO = { // fiche d'un allié quand c'est lui que l'on incarne : Amara prend sa place à la radio
+  kofi: ['Amara Diallo', 'Amara, lame-tempête et sœur d\'armes de Kofi, tient la radio depuis les docks des serres. « Monte jusqu\'au sanctuaire du vent. Je garde tes arrières. »'],
+  zuri: ['Amara Diallo', 'Amara, dernière lame-tempête, cherche le passage secret vers la Flèche dans les Archives d\'Ifá. « Les masques ont peur, Zuri… et moi aussi. »']
+};
+function leadHero() { const k = G && !G.demo && G.p && G.p.active && HEROES[G.p.kind] ? G.p.kind : PICK[0]; return HEROES[k] ? k : 'amara'; }
+function nameIn(t, from, to) { // remplace un prénom en gérant l'élision (d'Amara → de Kofi)
+  const v = /^[AEIOUÀÂÉÈÊÎÔÛ]/.test(to);
+  return t.replace(new RegExp("(\\b[dD]|\\b[qQ]u)'" + from, 'g'), (m, a) => v ? a + "'" + to : (a.toLowerCase() === 'd' ? a + 'e ' : a + 'e ') + to).replace(new RegExp(from, 'g'), to);
+}
+const FULL = { amara: 'Amara Diallo', kofi: 'Kofi Mensah', zuri: 'Zuri Okafor' };
+function castText(t, lead) {
+  lead = lead || leadHero(); if (!t) return t;
+  const m = GENDER[lead] === 'm'; t = t.replace(/\{([^|{}]*)\|([^|{}]*)\}/g, (x, f, g) => m ? g : f).replace(/\{NOM\}/g, FULL[lead] ? FULL[lead].split(' ')[1] : HEROES[lead].name);
+  if (lead === 'amara') return t;
+  const L = HEROES[lead].name, swap = lead === 'kofi' || lead === 'zuri';
+  t = t.replace(/Amara Diallo/g, '\u0002'); if (swap) t = t.replace(new RegExp(FULL[lead], 'g'), '\u0003');
+  t = nameIn(t, 'Amara', '\u0001'); if (swap) t = nameIn(t, L, 'Amara'); t = nameIn(t, '\u0001', L); t = t.replace(/\u0002/g, FULL[lead] || L).replace(/\u0003/g, 'Amara Diallo');
+  if (GENDER[lead] === 'm') t = t.replace(/fille d'Ọya/g, 'fils des Gardiens').replace(/\bGardienne\b/g, 'Gardien').replace(/petite sœur/g, 'petit frère').replace(/monte seule/g, 'monte seul');
+  else t = t.replace(/fille d'Ọya/g, 'fille des Gardiens');
+  if (lead === 'kofi') t = t.replace(/grand frère/g, 'grande sœur'); // Amara tient alors le rôle de Kofi
+  return t;
+}
+function castLine([who, txt]) {
+  const lead = leadHero(); if (lead === 'amara') return [who, castText(txt, lead)];
+  if (who === 'amara') who = lead; else if (who === lead) who = 'amara';
+  return [who, castText(txt, lead)];
+}
+
 let PICK = ['amara', 'kofi', 'zuri', 'kenzo'];
 try { const v = JSON.parse(localStorage.getItem('orun-pick') || 'null'); if (Array.isArray(v) && v.every(h => HEROES[h])) v.slice(0, 4).forEach((h, i) => PICK[i] = h); } catch (e) {}
 const HLOADED = { amara: 1 };
 const HP_ = p => HEROES[p.kind] || HEROES.amara;
-const P2TINT = [255, 168, 118]; // J2 : Amara aux reflets braise, en attendant l'animation de Kofi et Zuri
+const P2TINT = [255, 168, 118];
 const alive = () => G.players.filter(p => p.active && p.st !== 'out');
 // cible d'un ennemi : le joueur debout le plus proche (avec un peu d'inertie)
 function target(e) {
@@ -382,7 +421,7 @@ class Play extends Phaser.Scene {
     $('loading').hidden = true;
     heroHUD(); renderPick();
     const B = LEVELS[LV].boss; $('bFace').style.backgroundImage = 'url(' + B.face + ')'; $('bName').textContent = B.name; $('bPhase').textContent = B.sub;
-    $('biEy').textContent = B.ey; $('biName').textContent = B.name; $('biDesc').textContent = B.desc; $('biLine').textContent = B.line;
+    $('biEy').textContent = B.ey; $('biName').textContent = B.name; $('biDesc').textContent = castText(B.desc); $('biLine').textContent = castText(B.line);
     newGame(true);
     if (CARRY) { $('title').hidden = true; showStory('intro'); return; } // passage à l'acte suivant : on enchaîne sur son récit
     state = 'title';
@@ -709,7 +748,7 @@ function playerUpdate(p, dt) {
     else if (ok && (p.en >= 50 || p.hp > 20)) {
       if (p.en >= 50) p.en -= 50; else { p.hp -= 15; floatTxt(p.x, p.y - 250, 'SACRIFICE −15', '#ff5a6e', true); } // Tempête désespérée : coûte de la vie
       // direction maintenue vers l'avant : Ruée-tempête ; sinon Tempête circulaire
-      if (mvx && Math.abs(mvx) > .3) { p.face = Math.sign(mvx); rush(p); } else (SUPER[p.kind] || SUPER.amara).s1(p);
+      if (p.kind === 'amara' && mvx && Math.abs(mvx) > .3) { p.face = Math.sign(mvx); rush(p); } else { if (mvx) p.face = Math.sign(mvx); (SUPER[p.kind] || SUPER.amara).s1(p); } // la Ruée-tempête est propre à Amara
     }
     else if (ok) floatTxt(p.x, p.y - 230, 'TROP FAIBLE', '#ff5a6e');
   }
@@ -1892,19 +1931,20 @@ function demoTick(dt) {
 
 /* ---------- Conseils contextuels (une fois par appareil) ---------- */
 let tipSeen = {}; try { tipSeen = JSON.parse(localStorage.getItem('orun-tips') || '{}'); } catch (e) {}
+const S1N = () => HEROES[leadHero()].s1;
 const TIPS = {
   move: () => touch ? 'Joystick : déplacement en 8 directions. Maintiens une direction pour <b>courir</b>.' : '<b>Flèches/ZQSD</b> : déplacement. Double-tape ou maintiens une direction pour <b>courir</b>.',
   grab: () => 'Prise ! <b>' + (touch ? 'Frappe' : 'J') + '</b> = genoux · <b>' + (touch ? 'Saut' : 'K') + '</b> = passer dans son dos · <b>arrière + ' + (touch ? 'Frappe' : 'J') + '</b> = projection.',
   vault: () => 'Dans son dos : <b>' + (touch ? 'Saut' : 'K') + '</b> = renversement, il s\'écrase sur ses alliés.',
   held: () => 'Un capitaine te tient ! <b>Martèle les boutons</b> pour te libérer. En coop, ton partenaire peut le frapper.',
-  weapon: () => 'Arme en main : plus de portée et de dégâts, elle s\'use. <b>Tempête</b> = la lancer. Tu la perds si tu tombes.',
+  weapon: () => 'Arme en main : plus de portée et de dégâts, elle s\'use. <b>' + S1N() + '</b> = la lancer. Tu la perds si tu tombes.',
   rank: () => 'Nouvelle <b>étoile</b> : coups plus forts et plus rapides. Tu en perds une à chaque chute.',
   flood: () => 'Quand une vanne s\'ouvre, une vague balaie le sol : <b>saute</b> au bon moment.',
   dark: () => 'Les lumières s\'éteignent par moments : reste près de ton partenaire et frappe ce que tu vois.',
   harponneur: () => 'Ligne orange = harpon : <b>change de ligne</b> ou saute, sinon il te ramène à lui.',
   plongeur: () => 'Le plongeur disparaît sous l\'eau et ressurgit <b>derrière toi</b> : retourne-toi vite.',
   spectre: () => 'Le spectre se dédouble quand il faiblit : le reflet pâle tombe en un coup.',
-  lamelune: () => 'La lame-lune <b>pare</b> de face : prends-la de dos, utilise la Tempête ou une prise.',
+  lamelune: () => 'La lame-lune <b>pare</b> de face : prends-la de dos, utilise ' + S1N() + ' ou une prise.',
   gusts: () => 'Les rafales poussent tout le monde : <b>avance contre le vent</b> ou profites-en pour pousser les ennemis dans le vide.',
   faucheuse: () => 'La faucheuse frappe loin et bas : <b>saute</b> par-dessus sa faucille, puis colle-la. Évite ses spores violettes.',
   yewa: () => 'Yewa-Nul vole : <b>frappe en sautant</b>, ou attends qu\'elle s\'épuise au sol après un piqué. Quitte les cercles verts.',
@@ -1913,10 +1953,10 @@ const TIPS = {
   milicien: () => 'Le milicien <b>pare</b> de face : le 3ᵉ coup du combo, l\'esquive ou une <b>prise</b> brisent sa garde.',
   chien: () => 'Le chien s\'accroupit avant de bondir : <b>change de ligne</b> ou saute.',
   tireuse: () => 'Ligne violette = tir imminent. <b>Frappe au bon moment</b> pour le renvoyer.',
-  brute: () => 'Bouclier frontal : contourne-la, <b>Tempête</b>, ou combo jusqu\'à le briser. <b>Saute</b> l\'onde au sol.',
+  brute: () => 'Bouclier frontal : contourne-la, <b>' + S1N() + '</b>, ou combo jusqu\'à le briser. <b>Saute</b> l\'onde au sol.',
   pretresse: () => 'La prêtresse protège ses alliés d\'un sceau : <b>frappe-la</b> pour le dissiper.',
-  power: () => '<b>Tempête prête</b> (' + (touch ? 'bouton turquoise' : 'L') + ') : sur place = onde circulaire · <b>avec une direction</b> = Ruée-tempête. Sans énergie, elle coûte de la vie.',
-  boss: () => LV === 1 ? TIPS.yewa() : LV > 1 ? (LEVELS[LV].boss.tip || '') : 'Oba Ferrum est blindé : <b>Tempête, tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
+  power: () => leadHero() === 'amara' ? '<b>Tempête prête</b> (' + (touch ? 'bouton turquoise' : 'L') + ') : sur place = onde circulaire · <b>avec une direction</b> = Ruée-tempête. Sans énergie, elle coûte de la vie.' : '<b>' + S1N() + '</b> disponible (' + (touch ? 'bouton ' + HEROES[leadHero()].b1 : 'L') + ') · <b>Super 2</b> (' + (touch ? 'bouton ' + HEROES[leadHero()].b2 : 'O') + ') à 75 % d\'énergie. Sans énergie, le Super 1 coûte de la vie.',
+  boss: () => LV === 1 ? TIPS.yewa() : LV > 1 ? (LEVELS[LV].boss.tip || '') : 'Oba Ferrum est blindé : <b>' + S1N() + ', tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
   throwBoss: () => LV === 1 ? 'Renforts ! <b>Projette</b> une faucheuse : Yewa est touchée de plein fouet si elle plane bas.' : 'Renforts ! <b>Projette</b> un milicien sur le colosse.',
 };
 let tipQ = [], tipT = 0;
@@ -1960,7 +2000,11 @@ function showStory(mode) {
 }
 function renderStory() {
   const list = storyMode === 'intro' ? STORY : [END];
-  const [ey, tx] = list[storyI]; $('stEy').textContent = ey; $('stTx').textContent = tx;
+  let [ey, tx] = list[storyI]; const lead = leadHero();
+  if (lead !== 'amara' && ey === 'Amara Diallo') { [ey, tx] = BIO[lead]; tx += ' Au cœur du réacteur, Oba Ferrum, protecteur du quartier, a été enchaîné et retourné contre les siens.'; }
+  else if (ALLY_BIO[lead] && storyMode === 'intro' && LV === (lead === 'kofi' ? 1 : 4) && ey === BIO[lead][0]) [ey, tx] = ALLY_BIO[lead];
+  else { ey = castText(ey, lead); tx = castText(tx, lead); }
+  $('stEy').textContent = ey; $('stTx').textContent = tx;
   $('stDots').innerHTML = list.map((_, i) => `<i class="${i === storyI ? 'on' : ''}"></i>`).join('');
   const more = LV < LEVELS.length - 1;
   $('bNext').textContent = storyMode === 'end' ? (more ? 'Acte suivant ▶' : 'Retour au menu') : storyI < list.length - 1 ? 'Continuer' : 'Combattre';
@@ -1981,9 +2025,9 @@ function bossIntro() {
 }
 function showOver() {
   if (state !== 'play') return; state = 'over'; document.body.classList.remove('playing'); playTrack('over');
-  $('ovEy').textContent = NPLAYERS > 1 ? 'Les héritiers sont tombés' : HP_(G.p).name + ' est tombé' + (['amara', 'zuri', 'solea'].includes(G.p.kind) ? 'e' : ''); $('ovScore').textContent = String(Math.floor(G.score)).padStart(6, '0');
+  $('ovEy').textContent = NPLAYERS > 1 ? 'Les héritiers sont tombés' : HP_(G.p).name + (GENDER[G.p.kind] === 'm' ? ' est tombé' : ' est tombée'); $('ovScore').textContent = String(Math.floor(G.score)).padStart(6, '0');
   $('ovSub').textContent = G.kills + ' ennemis vaincus · zone ' + (G.checkpoint + 1) + ' sur ' + ENC.length + (G.cont > 0 ? ' · ' + G.cont + ' crédit' + (G.cont > 1 ? 's' : '') + ' restant' + (G.cont > 1 ? 's' : '') : ' · plus de crédit');
-  $('bRetry').hidden = G.cont <= 0; $('bRetry').textContent = 'Continuer (' + G.cont + ')'; $('ovEy').textContent = G.cont > 0 ? (NPLAYERS > 1 ? 'Les héritiers sont tombés' : 'Amara est tombée') : 'Fin de partie';
+  $('bRetry').hidden = G.cont <= 0; $('bRetry').textContent = 'Continuer (' + G.cont + ')'; $('ovEy').textContent = G.cont > 0 ? (NPLAYERS > 1 ? 'Les héritiers sont tombés' : HP_(G.p).name + (GENDER[G.p.kind] === 'm' ? ' est tombé' : ' est tombée')) : 'Fin de partie';
   $('over').hidden = false; saveBest();
 }
 function victory() {
@@ -2465,13 +2509,13 @@ $('cskip').addEventListener('click', e => { e.stopPropagation(); endIntro(true);
 addEventListener('resize', () => { if (CN.on) fitCine(); });
 
 /* ---------- Dialogues : radio (sans pause) et scènes (avec pause) ---------- */
-const WHO = { amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'], yewa: ['Yewa-Nul', 'face_yewa.webp', '#8ef7c4'], ijji: ['Ìjì', 'face_ijji.webp', '#c58cff'], oshun: ['Ọ̀ṣun', 'face_oshun.webp', '#5fe3e0'], eshu: ['Ẹ̀ṣù', 'face_eshu.webp', '#ff5a4a'], nyx2: ['Nyx', 'face_nyx.webp', '#9a5cff'] };
+const WHO = { kenzo: ['Kenzo', 'face_kenzo.webp', '#ffe14a'], solea: ['Soléa', 'face_solea.webp', '#ff7a2f'], toussaint: ['Toussaint', 'face_toussaint.webp', '#4fb0ff'], amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'], yewa: ['Yewa-Nul', 'face_yewa.webp', '#8ef7c4'], ijji: ['Ìjì', 'face_ijji.webp', '#c58cff'], oshun: ['Ọ̀ṣun', 'face_oshun.webp', '#5fe3e0'], eshu: ['Ẹ̀ṣù', 'face_eshu.webp', '#ff5a4a'], nyx2: ['Nyx', 'face_nyx.webp', '#9a5cff'] };
 const TALK = {
   start: [['zuri', 'Amara, je te reçois. La milice a bouclé le Marché Haut. Ouvre-toi un chemin jusqu\'au réacteur.'], ['amara', 'Ils ont choisi le mauvais jour.']],
   enc1: [['zuri', 'Des tireuses dans les ruelles. Quand la ligne violette s\'allume, frappe le tir : il repartira à l\'envoyeur.'], ['zuri', 'Et méfie-toi des brutes à bouclier. De face, elles sont des murs.']],
   enc2: [['kofi', 'Le pont des Vents tient encore. Je renforce les câbles : tiens-les loin de moi, petite sœur !'], ['amara', 'Fais vite, Kofi.']],
   enc3: [['zuri', 'Les prêtresses de Sombre-Lune parlent aux machines comme on parle aux esprits.'], ['amara', 'Alors je vais leur couper la parole.']],
-  boss: [['ferrum', 'Gardienne… Ils ont mis des chaînes à mon cœur.'], ['amara', 'Je suis venue les briser, Oba.'], ['ferrum', 'Alors frappe vite… avant que leur volonté ne m\'oblige à t\'écraser.']],
+  boss: [['ferrum', 'Gardienne… Ils ont mis des chaînes à mon cœur.'], ['amara', 'Je suis {venue|venu} les briser, Oba.'], ['ferrum', 'Alors frappe vite… avant que leur volonté ne m\'oblige à t\'écraser.']],
   phase2: [['ferrum', 'ILS M\'ARRACHENT LE CŒUR !'], ['zuri', 'Son armure cède ! Garde tes distances quand il charge, Amara !']],
   win: [['ferrum', 'Libre… Merci, fille d\'Ọya. Les Jardins-Turbines… ils y retiennent Yewa.'], ['nyx', 'Belle démonstration, Amara. Tu as toujours eu le geste juste… et le mauvais camp.'], ['amara', '…Nyx ?'], ['zuri', 'Cette voix… Amara, c\'était ta maîtresse d\'armes ?']],
 };
@@ -2489,7 +2533,7 @@ const TALK3 = {
   enc1: [['kofi', 'Les harponneurs tirent leur chaîne de loin. Quand le harpon s\'allume, change de ligne !'], ['amara', 'Et s\'ils me ratent, je leur rends la monnaie.']],
   enc2: [['zuri', 'Le croissant violet bombarde les quais ! Regarde le sol : les ombres rouges montrent où ça tombe.'], ['amara', 'Ils tirent sur leurs propres docks…']],
   enc3: [['kofi', 'Le vaisseau amiral d\'Ìjì est à quai. Ses cales sont pleines d\'esprits, je les entends d\'ici.'], ['amara', 'Alors on vide les cales.']],
-  boss: [['ijji', 'Une Gardienne sur mon pont ? Il y a une prime sur ta tête, Diallo.'], ['amara', 'Tes cales sont pleines d\'esprits. Ouvre-les.'], ['ijji', 'Ce sont des marchandises. Et toi, tu vas passer par-dessus bord.']],
+  boss: [['ijji', '{Une Gardienne|Un Gardien} sur mon pont ? Il y a une prime sur ta tête, {NOM}.'], ['amara', 'Tes cales sont pleines d\'esprits. Ouvre-les.'], ['ijji', 'Ce sont des marchandises. Et toi, tu vas passer par-dessus bord.']],
   phase2: [['ijji', 'FEU À VOLONTÉ ! Rasez-moi ce quai !'], ['kofi', 'Elle bombarde tout ! Reste mobile, Amara !']],
   win: [['ijji', 'Mon vaisseau… Sombre-Lune paiera pour ça. Ou toi.'], ['kofi', 'Les cales s\'ouvrent ! Regarde-les s\'envoler, Amara.'], ['zuri', 'Les registres de bord parlent des Bassins d\'Ọ̀ṣun. Ils empoisonnent l\'eau de toute la cité.'], ['amara', 'Alors on descend sous la ville.']]
 };
@@ -2507,7 +2551,7 @@ const TALK5 = {
   enc1: [['zuri', 'Des spectres d\'archives ! Ils disparaissent et réapparaissent dans ton dos. Écoute le froissement.'], ['amara', 'Des fantômes qui ont peur des coups de pied ?']],
   enc2: [['zuri', 'Les lampes s\'éteignent ! Reste près des braseros : dans le noir, on ne voit que leurs yeux.'], ['amara', 'Alors je frapperai entre les yeux.']],
   enc3: [['zuri', 'La salle des miroirs. Ẹ̀ṣù y est enfermé. Tant qu\'il est captif, tous les chemins mentent.'], ['amara', 'Je vais lui rendre ses routes.']],
-  boss: [['eshu', 'Une visiteuse ! Tous les chemins mènent ici, Gardienne. Lequel est le bon ?'], ['amara', 'Celui qui te libère, Ẹ̀ṣù.'], ['eshu', 'Ha ! Alors trouve-moi d\'abord.']],
+  boss: [['eshu', '{Une visiteuse|Un visiteur} ! Tous les chemins mènent ici, Gardienne. Lequel est le bon ?'], ['amara', 'Celui qui te libère, Ẹ̀ṣù.'], ['eshu', 'Ha ! Alors trouve-moi d\'abord.']],
   phase2: [['eshu', 'MILLE REFLETS, MILLE MENSONGES !'], ['zuri', 'Il se démultiplie ! Les faux tombent en un coup : cherche celui qui ne se brise pas !']],
   win: [['eshu', 'Bien joué. Les miroirs disent enfin la même chose.'], ['eshu', 'La passerelle mène à la Flèche d\'Ọ̀run. Ton ancienne maîtresse t\'y attend. Elle croit encore sauver la cité.'], ['zuri', 'Amara… je viens avec toi. Kofi aussi.'], ['amara', 'Alors on finit ça ensemble.']]
 };
@@ -2522,7 +2566,7 @@ const TALK6 = {
 };
 const TALKS = [TALK, TALK2, TALK3, TALK4, TALK5, TALK6];
 let radioQ = [], radioT = 0, talkCb = null, talkQ = [], talkTyping = 0;
-function radio(lines) { radioQ.push(...lines); }
+function radio(lines) { radioQ.push(...lines.map(castLine)); }
 function radioTick(dt) {
   const el = $('radio');
   if (radioT > 0) { radioT -= dt; if (radioT <= 0) el.classList.remove('on'); return; }
@@ -2532,7 +2576,7 @@ function radioTick(dt) {
   el.classList.add('on'); radioT = 1.6 + txt.length * .045; sfx.radio && sfx.radio();
 }
 function cutscene(lines, cb) {
-  talkQ = lines.slice(); talkCb = cb; state = 'talk'; document.body.classList.remove('playing');
+  talkQ = lines.map(castLine); talkCb = cb; state = 'talk'; document.body.classList.remove('playing');
   $('radio').classList.remove('on'); $('tip').hidden = true; tipT = 0; $('talk').hidden = false; nextTalk();
 }
 function nextTalk() {
@@ -2553,5 +2597,5 @@ window.GAME = new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' }, fps: { target: 60 },
   scene: [Play]
 });
-window.__orun = { sfxLoaded: () => Object.fromEntries(Object.entries(SB).map(([k, v]) => [k, v.length])), trace(on) { const t = TRACE; TRACE = on ? [] : null; return t; }, get G() { return G; }, get state() { return state; }, inp, INP, join(s) { joinPlayer(G.players[s || 1]); }, devMap: () => devMap(), CTRL, dbg: { impact: (...a) => impactFx(...a), spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
+window.__orun = { castDump: lead => { const out = []; for (const T of TALKS) for (const k in T) for (const l of T[k]) { const save = PICK[0]; PICK[0] = lead; const G0 = G; G = null; out.push(castLine(l)); G = G0; PICK[0] = save; } for (const L of LEVELS) { for (const [e, t] of L.intro) out.push([castText(e, lead), castText(t, lead)]); out.push([castText(L.end[0], lead), castText(L.end[1], lead)]); } return out; }, sfxLoaded: () => Object.fromEntries(Object.entries(SB).map(([k, v]) => [k, v.length])), trace(on) { const t = TRACE; TRACE = on ? [] : null; return t; }, get G() { return G; }, get state() { return state; }, inp, INP, join(s) { joinPlayer(G.players[s || 1]); }, devMap: () => devMap(), CTRL, dbg: { impact: (...a) => impactFx(...a), spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
 })();

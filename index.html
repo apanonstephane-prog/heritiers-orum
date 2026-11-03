@@ -95,6 +95,14 @@ body.touch #boss{width:min(360px,34vw)}
 .cmap{border-collapse:collapse;width:100%;font:600 12px var(--ui)}.cmap th{color:var(--mute);text-align:left;font-weight:600;padding:3px}.cmap td{padding:2px 3px}.cmap .opt{padding:5px 10px;min-width:80px}
 #padToast{position:absolute;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:9;background:rgba(11,7,20,.9);border:1px solid var(--teal);border-radius:999px;padding:8px 16px;font:600 13px var(--ui);opacity:0;transition:.3s;pointer-events:none}#padToast.on{opacity:1;transform:translate(-50%,0)}
 @media (max-width:700px){.cslots{grid-template-columns:1fr}}
+/* écrans courts (téléphone en paysage, ou portrait pivoté) : classe .short posée selon la hauteur utile réelle */
+.short #keys,.short #keys2,.short .tag{display:none!important}
+.short .tc{gap:6px;max-width:min(640px,100%)}.short h1{font-size:28px}.short .opt{padding:5px 10px}
+.short .hc{width:46px}.short .hc i{width:36px;height:36px}
+.short .heroes.many{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}.short .heroes.many .hc{width:auto;padding:2px;border-radius:7px}.short .heroes.many .hc i{width:30px;height:30px}.short .heroes.many .hc b{display:none}.short .heroes.many .hrow{gap:3px;flex-wrap:nowrap}
+.short .heroes.many .hinfo{display:none}
+.short .cbox{max-height:calc(100% - 8px);overflow-y:auto;gap:6px;padding-top:10px;padding-bottom:0}.short .cbox .sub{display:none}.short .cmap td{padding:1px 3px}.short .cmap .opt{padding:3px 8px}
+.cbox>.row{position:sticky;bottom:0;padding:8px 0;background:linear-gradient(transparent,rgba(11,7,20,.97) 30%)}
 /* Choix des héros */
 .heroes{display:flex;flex-direction:column;gap:6px}
 .hrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -290,4 +298,4 @@ h1 em{font-style:normal;color:var(--gold)}
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=28" charset="utf-8"></script>
+<script src="game.js?v=29" charset="utf-8"></script>
