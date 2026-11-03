@@ -25,6 +25,9 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 ## Héros jouables
 Amara, Kofi, Zuri, Kenzo, Soléa, Toussaint : choix à l'écran titre (J1 et J2). Planches dans `h/` (`atlas_<héros>` bureau, `atlas_m<héros>` mobile), chargées à la demande. Table `HEROES` (stats) et `SUPER` (deux supers par héros) dans `game.js`. Images sources dans `pipeline/frames/h_<héros>`, specs `spec_h_*.json`.
 
+## Coop et manettes
+Jusqu'à 4 joueurs. Manettes Xbox / PlayStation (API Gamepad) détectées automatiquement, une par joueur ; écran « Contrôles » pour affecter clavier / pavé / manettes à J1–J4 et réassigner les boutons (sauvegardé dans le navigateur, clé `orun-ctrl`).
+
 ## Actes
 Chaque acte se termine par une cinématique (plans dans `cine/`, séquences `CINES` dans `game.js`) ; celle de l'Acte VI est la fin du jeu.
 - **Acte I · Les Quartiers suspendus** : décor à la racine, boss Oba Ferrum.

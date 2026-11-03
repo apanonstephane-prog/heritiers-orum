@@ -254,7 +254,9 @@ let G = null;    // état de partie
 let state = 'loading', paused = false;
 // une entrée par joueur ; inp = joueur 1 (clavier principal, tactile, 1re manette)
 const mkInp = () => ({ x: 0, y: 0, kx: 0, ky: 0, jx: 0, jy: 0, gx: 0, gy: 0, atk: 0, kick: 0, jump: 0, pow: 0, dash: 0, heavy: 0, sweep: 0, sup2: 0, runReq: 0 });
-const INP = [mkInp(), mkInp()];
+const INP = [mkInp(), mkInp(), mkInp(), mkInp()];
+const MAXP = 4, SLOTCOL = [0x2fe0d0, 0xff8a3d, 0x8dff6a, 0xff6ad5], SLOTCSS = ['#2fe0d0', '#ff8a3d', '#8dff6a', '#ff6ad5'], SLOTTINT = [null, [255, 168, 118], [170, 255, 160], [255, 170, 230]];
+const hudSfx = i => i ? String(i + 1) : '';
 const inp = INP[0];
 let NPLAYERS = 1;
 /* ---------- Héros jouables ---------- */
@@ -267,8 +269,8 @@ const HEROES = {
   toussaint: {  b1: 'Cyclone', b2: 'Vague',name: 'Toussaint', face: 'face_toussaint.webp', col: 0x4fb0ff, css: '#4fb0ff', em: 'pWater', hp: 130, spd: .86, dmg: 1.2, aspd: .9, reach: 1, grab: 1.6, role: 'Lutteur · prises et projections', s1: 'Cyclone', s2: 'Raz-de-marée' }
 };
 const HERO_IDS = Object.keys(HEROES);
-let PICK = ['amara', 'kofi'];
-try { const v = JSON.parse(localStorage.getItem('orun-pick') || 'null'); if (Array.isArray(v) && v.length === 2 && v.every(h => HEROES[h])) PICK = v; } catch (e) {}
+let PICK = ['amara', 'kofi', 'zuri', 'kenzo'];
+try { const v = JSON.parse(localStorage.getItem('orun-pick') || 'null'); if (Array.isArray(v) && v.every(h => HEROES[h])) v.slice(0, 4).forEach((h, i) => PICK[i] = h); } catch (e) {}
 const HLOADED = { amara: 1 };
 const HP_ = p => HEROES[p.kind] || HEROES.amara;
 const P2TINT = [255, 168, 118]; // J2 : Amara aux reflets braise, en attendant l'animation de Kofi et Zuri
@@ -403,7 +405,7 @@ function draw(a) {
   a.spr.setFlipX(a.face < 0); a.spr.setOrigin(a.face < 0 ? 1 - fm[5] : fm[5], fm[6]);
   a.spr.setPosition(a.x, a.y - a.z - (a.hover || 0)).setDepth(a.y + (a.dz || 0) + (a.isPlayer && (a.st === 'grab' || a.st === 'held') ? 40 : 0));
   a.sh.setPosition(a.x, a.y + 2).setDepth(3).setScale(a.shW * (1 - Math.min(.5, a.z / 300)), 1).setAlpha(.38 * (1 - Math.min(.6, a.z / 300)));
-  if (a.isPlayer) { const coop = NPLAYERS > 1; a.sh.setTint(coop ? (a.slot ? 0xff8a3d : 0x2fe0d0) : 0x000000); if (coop) a.sh.setAlpha(.55 * (1 - Math.min(.6, a.z / 300))); }
+  if (a.isPlayer) { const coop = NPLAYERS > 1; a.sh.setTint(coop ? SLOTCOL[a.slot] : 0x000000); if (coop) a.sh.setAlpha(.55 * (1 - Math.min(.6, a.z / 300))); }
 }
 
 /* ---------- Entités ---------- */
@@ -420,9 +422,8 @@ function newGame(demo) {
   if (G) { for (const e of G.all) { e.spr.destroy(); e.sh.destroy(); e.bub && e.bub.destroy(); } for (const p of G.props) p.spr.destroy(); for (const p of G.items) p.spr.destroy(); for (const s of G.shots) s.spr && s.spr.destroy(); }
   const D = DIFF[DIFFK];
   G = { demo, t: 0, cam: 0, camMin: 0, lock: null, enc: 0, wave: 0, score: 0, combo: 0, comboT: 0, hitstop: 0, ts: 1, tsT: 1, all: [], en: [], props: [], items: [], shots: [], rings: [], beams: [], boss: null, ended: false, checkpoint: 0, kills: 0, tokens: 0, goT: 0, timers: [], said: {}, cont: D.cont, zoneTint: 0xffffff, players: [], event: null, pshots: [], haz: [], clouds: [], gustT: 0, wind: 0, hfx: [] };
-  G.players.push(newPlayer(0, 220, 430));
-  G.players.push(newPlayer(1, 160, 470));
-  if (!demo && NPLAYERS > 1) joinPlayer(G.players[1], true);
+  G.players.push(newPlayer(0, 220, 430)); G.players.push(newPlayer(1, 160, 470)); G.players.push(newPlayer(2, 130, 500)); G.players.push(newPlayer(3, 250, 500));
+  if (!demo) for (let i = 1; i < NPLAYERS; i++) joinPlayer(G.players[i], true);
   G.p = G.players[0]; heroHUD();
   for (const e of ENC) for (const [x, f, k] of e.props) addProp(k, x, f);
   updHUD();
@@ -439,10 +440,10 @@ function newPlayer(slot, x, y) {
 function joinPlayer(p, silent) {
   if (p.active) return; const p1 = G.players[0];
   p.active = true; p.hp = p.max; p.en = 50; p.lives = DIFF[DIFFK].lives; p.st = 'idle'; p.z = 0; p.vx = p.vy = 0; p.inv = silent ? 0 : 2;
-  p.x = clamp(p1.x - 70, (G.lock != null ? G.lock : G.cam) + 60, (G.lock != null ? G.lock : G.cam) + VW - 60); p.y = clamp(p1.y + 40, floorAt(p.x)[0], floorAt(p.x)[1]);
+  p.x = clamp(p1.x - 70 * (p.slot % 2 ? 1 : -1) * (p.slot > 1 ? 1.6 : 1), (G.lock != null ? G.lock : G.cam) + 60, (G.lock != null ? G.lock : G.cam) + VW - 60); p.y = clamp(p1.y + [0, 40, -40, 60][p.slot], floorAt(p.x)[0], floorAt(p.x)[1]);
   p.spr.setVisible(true); p.sh.setVisible(true); if (!G.all.includes(p)) G.all.push(p);
-  setClip(p, 'idle', 14, true); NPLAYERS = 2; $('hud2').hidden = false;
-  if (!silent) { floatTxt(p.x, p.y - 240, 'J2 EN PISTE', '#ffb37a', true); sfx.pick(); glowFx(p.x, p.y - 100, 0xffb37a, 5, 500); }
+  setClip(p, 'idle', 14, true); NPLAYERS = Math.max(NPLAYERS, p.slot + 1); $('hud' + (p.slot + 1)).hidden = false;
+  if (!silent) { floatTxt(p.x, p.y - 240, 'J' + (p.slot + 1) + ' EN PISTE', SLOTCSS[p.slot], true); sfx.pick(); glowFx(p.x, p.y - 100, SLOTCOL[p.slot], 5, 500); }
   updHUD();
 }
 function addProp(kind, x, f) {
@@ -488,7 +489,7 @@ function spawn(kind, side, elite) {
 function spawnBoss() {
   const L = G.lock, K = LEVELS[LV].boss.kind;
   const e = actor(K, L + VW + 140, (floorAt(L + 600)[0] + floorAt(L + 600)[1]) / 2, -1);
-  e.hp = e.max = Math.round(ENEMY[K].hp * DIFF[DIFFK].ehp * (NPLAYERS > 1 ? 1.5 : 1)); e.spd = ENEMY[K].spd;
+  e.hp = e.max = Math.round(ENEMY[K].hp * DIFF[DIFFK].ehp * (1 + .4 * (NPLAYERS - 1))); e.spd = ENEMY[K].spd;
   if (K === 'yewa') { e.x = L + VW - 260; e.hover = 420; e.st = 'yewaEnter'; e.shW = 2.2; } e.st = 'bossEnter'; e.phase = 1; e.cd = 2; e.boss = true; e.dz = 2;
   setClip(e, 'idle', 12, true); G.en.push(e); G.all.push(e); G.boss = e;
   $('boss').hidden = false; updBoss();
@@ -622,12 +623,12 @@ function playerOut(p) {
   if (G.players.some(q => q !== p && q.active && q.st !== 'out')) {
     // l'équipe continue : le joueur tombé peut revenir en dépensant un crédit (START / Tempête)
     p.st = 'out'; p.spr.setVisible(false); p.sh.setVisible(false); p.hp = 0;
-    floatTxt(p.x, p.y - 200, (p.slot ? 'J2' : 'J1') + ' HORS JEU' + (G.cont > 0 ? ' · START POUR REVENIR' : ''), '#ff5a6e', true); updHUD();
+    floatTxt(p.x, p.y - 200, 'J' + (p.slot + 1) + ' HORS JEU' + (G.cont > 0 ? ' · START POUR REVENIR' : ''), '#ff5a6e', true); updHUD();
   } else showOver();
 }
 function rejoin(p) {
   if (p.st !== 'out' || G.cont <= 0) return; G.cont--; p.lives = DIFF[DIFFK].lives; p.spr.setVisible(true); p.sh.setVisible(true);
-  const o = G.players.find(q => q !== p && q.active && q.st !== 'out') || p; p.x = o.x - 60 * (p.slot ? 1 : -1); p.y = o.y; respawn(p);
+  const o = G.players.find(q => q !== p && q.active && q.st !== 'out') || p; p.x = o.x - 60 * (p.slot % 2 ? 1 : -1); p.y = o.y; respawn(p);
 }
 /* ---------- Joueur ---------- */
 function toIdle(p) { p.st = 'idle'; p.combo = 0; setClip(p, 'idle', 14, true); }
@@ -1731,7 +1732,7 @@ function camera(dt) {
 // vagues : en coop on ajoute un ennemi par vague ; en difficile, certains deviennent élites
 function waveList(w) {
   const L = w.slice(), D = DIFF[DIFFK];
-  if (NPLAYERS > 1) L.push(L[L.length - 1].replace('*', ''));
+  for (let i = 1; i < NPLAYERS; i++) if (i < 3) L.push(L[(L.length - i) % L.length].replace('*', ''));
   if (D.elite >= 2) for (let i = 0; i < L.length; i++) if (!L[i].endsWith('*') && i % 3 === 1 && L[i] !== 'pretresse') L[i] += '*';
   if (D.elite === 0) for (let i = 0; i < L.length; i++) L[i] = L[i].replace('*', '');
   return L;
@@ -1836,13 +1837,13 @@ function drawAll() {
   for (const a of G.all) {
     if (a.fi < 0) animStep(a, 0);
     draw(a);
-    if (a.flash > 0) a.spr.setTintFill(0xffffff); else if (a.boss && a.phase === 2) a.spr.setTint(0xffd0b0); else if (a.st === 'grabbed') a.spr.setTint(0xffe0c8); else if (a.slot === 1 && G.players[0] && G.players[0].kind === a.kind) a.spr.setTint(mulTint(G.zoneTint, P2TINT)); else if (a.elite) a.spr.setTint(mulTint(G.zoneTint, ELITE[a.kind].tint)); else a.spr.setTint(G.zoneTint || 0xffffff);
+    if (a.flash > 0) a.spr.setTintFill(0xffffff); else if (a.boss && a.phase === 2) a.spr.setTint(0xffd0b0); else if (a.st === 'grabbed') a.spr.setTint(0xffe0c8); else if (a.slot && G.players.some(q => q.slot < a.slot && q.active && q.kind === a.kind)) a.spr.setTint(mulTint(G.zoneTint, SLOTTINT[a.slot])); else if (a.elite) a.spr.setTint(mulTint(G.zoneTint, ELITE[a.kind].tint)); else a.spr.setTint(G.zoneTint || 0xffffff);
     if (a.inv > 0 && a.isPlayer && a.st !== 'dash' && a.st !== 'power' && a.st !== 'rush') a.spr.setAlpha(Math.floor(a.inv * 16) % 2 ? .45 : 1);
     else if (a.kind === 'plongeur' && a.st === 'dive') { const pr = prog(a); a.spr.setAlpha(pr > .3 && pr < .62 ? 0 : 1); }
     else if (a.st !== 'gone' && !a.boss) a.spr.setAlpha(a.kind === 'spectre' ? (a.clone ? .55 : .82) : a.decoy ? .9 : 1);
     if (a.shade && a.flash <= 0) a.spr.setTint(0x6a4a9a);
     // petites barres de vie ennemies
-    if (a.isPlayer && NPLAYERS > 1 && a.active && a.st !== 'out') { SC.bars.fillStyle(a.slot ? 0xffb37a : 0x8ef7ff, .9).fillTriangle(a.x - 9, a.y - CHAR.amara.h - a.z - 30, a.x + 9, a.y - CHAR.amara.h - a.z - 30, a.x, a.y - CHAR.amara.h - a.z - 18); }
+    if (a.isPlayer && NPLAYERS > 1 && a.active && a.st !== 'out') { SC.bars.fillStyle(SLOTCOL[a.slot], .9).fillTriangle(a.x - 9, a.y - CHAR.amara.h - a.z - 30, a.x + 9, a.y - CHAR.amara.h - a.z - 30, a.x, a.y - CHAR.amara.h - a.z - 18); }
     if (!a.isPlayer && !a.boss && !a.dead && a.hp < a.max) { const w = 60, x = a.x - w / 2, y = a.y - CHAR[a.kind].h - a.z - 18; SC.bars.fillStyle(0x0b0714, .8).fillRect(x - 1, y - 1, w + 2, 6).fillStyle(0xff3d5a, 1).fillRect(x, y, w * a.hp / a.max, 4); if (a.shield > 0) SC.bars.fillStyle(0xb07cff, 1).fillRect(x, y + 6, w * a.shield / a.shieldMax, 3); }
   }
 }
@@ -1897,14 +1898,14 @@ let lastHud = '';
 function updHUD() {
   if (!G) return;
   G.players.forEach((p, i) => {
-    const sfx2 = i ? '2' : '', hp = p.st === 'out' ? 0 : p.hp / p.max * 100;
+    const sfx2 = hudSfx(i), hp = p.st === 'out' ? 0 : p.hp / p.max * 100;
     $('hpBar' + sfx2).querySelector('i').style.width = hp + '%'; $('hpBar' + sfx2).querySelector('b').style.width = hp + '%';
     $('enBar' + sfx2).querySelector('i').style.width = p.en + '%'; $('enBar' + sfx2).classList.toggle('full', p.en >= 50);
     const lv = G.demo ? '' : (p.st === 'out' ? 'HORS JEU' : '◆'.repeat(Math.max(0, p.lives))); if ($('lives' + sfx2).textContent !== lv) $('lives' + sfx2).textContent = lv;
     const st = G.demo ? '' : '★'.repeat(p.rank); if ($('rank' + sfx2).textContent !== st) $('rank' + sfx2).textContent = st;
     const w = p.weapon ? WEAPONS[p.weapon.kind].name + ' · ' + p.weapon.uses : ''; const el = $('wpn' + sfx2); if (el.textContent !== w) { el.textContent = w; el.hidden = !w; }
   });
-  $('hud2').hidden = G.demo || !G.players[1].active; $('hud').classList.toggle('duo', !$('hud2').hidden);
+  let n = 1; for (let i = 1; i < MAXP; i++) { const h = G.demo || !G.players[i].active; $('hud' + (i + 1)).hidden = h; if (!h) n++; } $('hud').classList.toggle('duo', n === 2); $('hud').classList.toggle('quad', n > 2);
   const c = $('credits'); const ct = G.demo ? '' : 'Crédits ' + G.cont; if (c.textContent !== ct) c.textContent = ct;
 }
 function updBoss() { const b = G.boss; if (!b) return; const f = Math.max(0, b.hp / b.max * 100); $('bossBar').querySelector('i').style.width = f + '%'; $('bossBar').querySelector('b').style.width = f + '%'; }
@@ -1942,7 +1943,7 @@ function bossIntro() {
 }
 function showOver() {
   if (state !== 'play') return; state = 'over'; document.body.classList.remove('playing'); playTrack('over');
-  $('ovEy').textContent = NPLAYERS > 1 ? 'Les héritiers sont tombés' : 'Amara est tombée'; $('ovScore').textContent = String(Math.floor(G.score)).padStart(6, '0');
+  $('ovEy').textContent = NPLAYERS > 1 ? 'Les héritiers sont tombés' : HP_(G.p).name + ' est tombé' + (['amara', 'zuri', 'solea'].includes(G.p.kind) ? 'e' : ''); $('ovScore').textContent = String(Math.floor(G.score)).padStart(6, '0');
   $('ovSub').textContent = G.kills + ' ennemis vaincus · zone ' + (G.checkpoint + 1) + ' sur ' + ENC.length + (G.cont > 0 ? ' · ' + G.cont + ' crédit' + (G.cont > 1 ? 's' : '') + ' restant' + (G.cont > 1 ? 's' : '') : ' · plus de crédit');
   $('bRetry').hidden = G.cont <= 0; $('bRetry').textContent = 'Continuer (' + G.cont + ')'; $('ovEy').textContent = G.cont > 0 ? (NPLAYERS > 1 ? 'Les héritiers sont tombés' : 'Amara est tombée') : 'Fin de partie';
   $('over').hidden = false; saveBest();
@@ -1990,7 +1991,8 @@ function applyCarry() {
   });
   updHUD();
 }
-function startGame() { if (state !== 'title') return; NPLAYERS = $('m2p').classList.contains('on') ? 2 : 1; state = 'loadingHeroes'; ensureHeroes([PICK[0], NPLAYERS > 1 ? PICK[1] : null], () => { state = 'title'; startIntro(begin); }); }
+const titleNP = () => [1, 2, 3, 4].find(n => $('m' + n + 'p').classList.contains('on')) || 1;
+function startGame() { if (state !== 'title' || !$('ctrl').hidden) return; NPLAYERS = titleNP(); DM = devMap(); state = 'loadingHeroes'; ensureHeroes(PICK.slice(0, NPLAYERS), () => { state = 'title'; startIntro(begin); }); }
 // chargement à la demande des planches des héros choisis
 function ensureHeroes(list, cb) {
   const need = [...new Set(list.filter(h => h && HEROES[h] && !HLOADED[h]))];
@@ -2010,23 +2012,23 @@ function ensureHeroes(list, cb) {
 // visages et noms du HUD selon les héros en jeu
 function heroHUD() {
   const k = i => (G && G.players[i] ? G.players[i].kind : PICK[i]);
-  [0, 1].forEach(i => { const H = HEROES[k(i)] || HEROES.amara, sx = i ? '2' : ''; $('pFace' + sx).style.backgroundImage = 'url(' + H.face + ')'; $('pName' + sx).textContent = H.name; });
+  [0, 1, 2, 3].forEach(i => { const H = HEROES[k(i)] || HEROES.amara, sx = hudSfx(i); $('pFace' + sx).style.backgroundImage = 'url(' + H.face + ')'; $('pName' + sx).textContent = H.name; });
   const H0 = HEROES[k(0)] || HEROES.amara; $('bPow').textContent = H0.b1; $('bSup').textContent = H0.b2;
 }
 // écran titre : choix des héros
 function renderPick() {
-  const two = $('m2p').classList.contains('on');
-  [0, 1].forEach(s => {
-    const row = $('hrow' + s); row.hidden = s === 1 && !two;
-    row.innerHTML = '<span class="hl">' + (s ? 'J2' : 'J1') + '</span>' + HERO_IDS.map(h => '<button class="hc' + (PICK[s] === h ? ' on' : '') + '" data-s="' + s + '" data-h="' + h + '" style="--hc:' + HEROES[h].css + '"><i style="background-image:url(' + HEROES[h].face + ')"></i><b>' + HEROES[h].name + '</b></button>').join('');
+  const np = titleNP(), two = np > 1; $('heroPick').classList.toggle('many', np > 2);
+  [0, 1, 2, 3].forEach(s => {
+    const row = $('hrow' + s); row.hidden = s >= np;
+    row.innerHTML = '<span class="hl" style="color:' + SLOTCSS[s] + '">J' + (s + 1) + '</span>' + HERO_IDS.map(h => '<button class="hc' + (PICK[s] === h ? ' on' : '') + '" data-s="' + s + '" data-h="' + h + '" style="--hc:' + HEROES[h].css + '"><i style="background-image:url(' + HEROES[h].face + ')"></i><b>' + HEROES[h].name + '</b></button>').join('');
   });
   const H = HEROES[PICK[0]], H2 = HEROES[PICK[1]];
-  $('hinfo').innerHTML = '<b style="color:' + H.css + '">' + H.name + '</b> · ' + H.role + ' · Super 1 : ' + H.s1 + ' · Super 2 : ' + H.s2 + (two ? '<br><b style="color:' + H2.css + '">' + H2.name + '</b> · ' + H2.role + ' · ' + H2.s1 + ' · ' + H2.s2 : '');
+  $('hinfo').innerHTML = '<b style="color:' + H.css + '">' + H.name + '</b> · ' + H.role + ' · Super 1 : ' + H.s1 + ' · Super 2 : ' + H.s2 + (two ? '<br>' + PICK.slice(1, np).map((h, i) => '<b style="color:' + SLOTCSS[i + 1] + '">J' + (i + 2) + '</b> ' + HEROES[h].name + ' (' + HEROES[h].role + ')').join(' · ') : '');
 }
 function pickHero(s, h) { PICK[s] = h; try { localStorage.setItem('orun-pick', JSON.stringify(PICK)); } catch (e) {} renderPick(); heroHUD(); sfx.pick && sfx.pick(); }
 $('heroPick').addEventListener('click', e => { const b = e.target.closest('.hc'); if (b) pickHero(+b.dataset.s, b.dataset.h); });
 $('bStart').addEventListener('click', () => { audio(); startGame(); });
-for (const id of ['m1p', 'm2p']) $(id).addEventListener('click', () => { $('m1p').classList.toggle('on', id === 'm1p'); $('m2p').classList.toggle('on', id === 'm2p'); $('keys2').hidden = id !== 'm2p'; renderPick(); });
+for (const n of [1, 2, 3, 4]) $('m' + n + 'p').addEventListener('click', () => { for (const k of [1, 2, 3, 4]) $('m' + k + 'p').classList.toggle('on', k === n); $('keys2').hidden = n < 2; NPLAYERS = n; DM = devMap(); renderPick(); });
 for (const k in DIFF) $('d-' + k).addEventListener('click', () => { DIFFK = k; try { localStorage.setItem('orun-diff', k); } catch (e) {} for (const j in DIFF) $('d-' + j).classList.toggle('on', j === k); });
 for (const j in DIFF) $('d-' + j).classList.toggle('on', j === DIFFK);
 $('bRetry').addEventListener('click', retry);
@@ -2039,71 +2041,124 @@ $('bMute').addEventListener('click', () => { audio(); muted = !muted; if (master
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') setPause(true); });
 
 /* ---------- Entrées ---------- */
-// clavier : en solo, flèches et ZQSD/WASD pilotent Amara ; à deux, flèches + pavé numérique = J2
+// Clavier principal (J1) : ZQSD/WASD + flèches, touches d'action reconfigurables.
+// Clavier « pavé » : flèches + pavé numérique (utilisé quand un joueur lui est affecté, ou en auto à 2 sans manette).
+// Manettes Xbox / PlayStation (API Gamepad, disposition standard) : boutons reconfigurables, une manette par joueur.
+const ACTIONS = [['atk', 'Frappe'], ['heavy', 'Coup lourd'], ['kick', 'Pied'], ['sweep', 'Balayette'], ['jump', 'Saut'], ['dash', 'Esquive'], ['pow', 'Super 1'], ['sup2', 'Super 2'], ['pause', 'Pause / rejoindre']];
+const DEF_PAD = { jump: 0, dash: 1, atk: 2, kick: 3, pow: 4, heavy: 5, sup2: 6, sweep: 7, pause: 9 };
+const DEF_KEY = { atk: 'j', heavy: 'u', kick: 'i', sweep: 'n', jump: 'k', dash: 'shift', pow: 'l', sup2: 'o', pause: 'p' };
+const CTRL = { slots: ['auto', 'auto', 'auto', 'auto'], pad: Object.assign({}, DEF_PAD), key: Object.assign({}, DEF_KEY) };
+try { const v = JSON.parse(localStorage.getItem('orun-ctrl') || 'null'); if (v) { if (Array.isArray(v.slots)) v.slots.slice(0, 4).forEach((d, i) => CTRL.slots[i] = d); Object.assign(CTRL.pad, v.pad || {}); Object.assign(CTRL.key, v.key || {}); } } catch (e) {}
+const saveCtrl = () => { try { localStorage.setItem('orun-ctrl', JSON.stringify(CTRL)); } catch (e) {} };
 const KEYS = { arrowleft: 'l', q: 'l', a: 'l', arrowright: 'r', d: 'r', arrowup: 'u', z: 'u', w: 'u', arrowdown: 'd', s: 'd' };
 const ARROWS = { arrowleft: 1, arrowright: 1, arrowup: 1, arrowdown: 1 };
 const P2PAD = { Numpad1: 'atk', Numpad2: 'jump', Numpad3: 'pow', Numpad0: 'dash', Numpad4: 'kick', Numpad5: 'heavy', Numpad6: 'sup2', Numpad7: 'sweep' };
-const held = [new Set(), new Set()];
-const lastTap = [{ d: '', t: 0 }, { d: '', t: 0 }];
+const held = [new Set(), new Set(), new Set(), new Set()];
+const lastTap = [0, 1, 2, 3].map(() => ({ d: '', t: 0 }));
+function connectedPads() { const raw = navigator.getGamepads ? navigator.getGamepads() : [], out = []; for (const g of raw) if (g && g.connected) out.push(g); return out; }
+function padType(gp) { const id = (gp && gp.id || '').toLowerCase(); if (/xbox|xinput|045e|microsoft/.test(id)) return 'xbox'; if (/054c|dualsense|dualshock|playstation|ps4|ps5|wireless controller/.test(id)) return 'ps'; return 'std'; }
+const BTN = {
+  xbox: ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'View', 'Menu', 'L3', 'R3', '↑', '↓', '←', '→', 'Xbox'],
+  ps: ['✕', '○', '□', '△', 'L1', 'R1', 'L2', 'R2', 'Create', 'Options', 'L3', 'R3', '↑', '↓', '←', '→', 'PS'],
+  std: ['B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', '↑', '↓', '←', '→', 'B16']
+};
+const btnName = (i, t) => (BTN[t] || BTN.std)[i] || 'B' + i;
+// qui contrôle quoi : { kb1: slot, kb2: slot|-1, pad: [slot par manette connectée] }
+function devMap() {
+  const pads = connectedPads(), n = Math.max(1, NPLAYERS), m = { kb1: -1, kb2: -1, pad: pads.map(() => -1), pads };
+  const free = new Set([0, 1, 2, 3]);
+  CTRL.slots.forEach((d, s) => { if (d === 'kb1') { m.kb1 = s; free.delete(s); } else if (d === 'kb2') { m.kb2 = s; free.delete(s); } else if (/^pad\d$/.test(d)) { const i = +d[3]; if (i < pads.length) { m.pad[i] = s; free.delete(s); } } else if (d === 'none') free.delete(s); });
+  const autoSlots = [0, 1, 2, 3].filter(s => free.has(s) && CTRL.slots[s] === 'auto');
+  const freePads = m.pad.map((s, i) => s < 0 ? i : -1).filter(i => i >= 0);
+  if (m.kb1 < 0 && autoSlots.includes(0)) m.kb1 = 0; // le clavier et le tactile pilotent toujours J1 en auto
+  if (freePads.length >= n) autoSlots.forEach(s => { if (freePads.length) m.pad[freePads.shift()] = s; });
+  else autoSlots.filter(s => s > 0).forEach(s => { if (freePads.length) m.pad[freePads.shift()] = s; else if (m.kb2 < 0 && s < n) m.kb2 = s; });
+  return m;
+}
+let DM = devMap();
+addEventListener('gamepadconnected', () => { DM = devMap(); if (!$('ctrl').hidden) renderCtrl(); toastPad(); });
+addEventListener('gamepaddisconnected', () => { DM = devMap(); if (!$('ctrl').hidden) renderCtrl(); });
+function toastPad() { const p = connectedPads(); if (!p.length) return; const t = $('padToast'); t.textContent = '🎮 ' + p.length + ' manette' + (p.length > 1 ? 's' : '') + ' détectée' + (p.length > 1 ? 's' : '') + ' · ' + p.map(g => ({ xbox: 'Xbox', ps: 'PlayStation', std: 'Manette' })[padType(g)]).join(', '); t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 3500); }
 function keyDir(i) { const h = held[i], I = INP[i]; I.kx = (h.has('r') ? 1 : 0) - (h.has('l') ? 1 : 0); I.ky = (h.has('d') ? 1 : 0) - (h.has('u') ? 1 : 0); }
-const keySlot = k => (NPLAYERS > 1 && ARROWS[k]) ? 1 : 0;
+const keySlot = k => (ARROWS[k] && DM.kb2 >= 0) ? DM.kb2 : DM.kb1;
+const keyAction = k => { for (const a in CTRL.key) if (CTRL.key[a] === k) return a; if (k === 'x') return 'atk'; if (k === ' ' || k === 'c') return 'jump'; if (k === 'b') return 'dash'; return null; };
+function joinSlot(s) { if (!G || s < 0 || s >= MAXP) return; const p = G.players[s]; if (!p.active) { ensureHeroes([PICK[s]], () => { if (!G.players[s].active) { reHero(G.players[s]); joinPlayer(G.players[s]); DM = devMap(); } }); } else if (p.st === 'out') rejoin(p); }
+// recrée l'acteur si le héros choisi n'était pas chargé à la création de la partie
+function reHero(p) {
+  const want = HLOADED[PICK[p.slot]] && SC.META[PICK[p.slot]] ? PICK[p.slot] : 'amara'; if (p.kind === want) return;
+  const np = newPlayer(p.slot, p.x, p.y); p.spr.destroy(); p.sh.destroy(); G.all = G.all.filter(a => a !== p); G.players[p.slot] = np; heroHUD();
+}
+let remapWait = null; // { kind: 'pad'|'key', act }
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
-  if (k === 'escape' || k === 'p') { setPause(!paused); return; }
+  if (remapWait && remapWait.kind === 'key') { e.preventDefault(); if (k !== 'escape') { const old = CTRL.key[remapWait.act]; for (const a in CTRL.key) if (CTRL.key[a] === k) CTRL.key[a] = old; CTRL.key[remapWait.act] = k; saveCtrl(); } remapWait = null; renderCtrl(); return; }
+  if (!$('ctrl').hidden) { if (k === 'escape') closeCtrl(); return; }
+  if (k === 'escape' || k === CTRL.key.pause) { setPause(!paused); return; }
   if (state === 'title' && k === 'enter') { audio(); startGame(); return; }
   if (state === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const i = HERO_IDS.indexOf(PICK[0]); pickHero(0, HERO_IDS[(i + (k === 'arrowright' ? 1 : HERO_IDS.length - 1)) % HERO_IDS.length]); return; }
   if (state === 'cine' && (k === 'enter' || k === 'escape' || k === ' ')) { e.preventDefault(); endIntro(); return; }
-  if (state === 'talk' && (k === 'enter' || k === ' ' || k === 'j' || k === 'x' || k === 'k' || e.code === 'Numpad1')) { e.preventDefault(); nextTalk(); return; }
+  if (state === 'talk' && (k === 'enter' || k === ' ' || k === CTRL.key.atk || k === CTRL.key.jump || e.code === 'Numpad1')) { e.preventDefault(); nextTalk(); return; }
   if (state === 'story' && (k === 'enter' || k === ' ')) { e.preventDefault(); $('bNext').click(); return; }
   if (state !== 'play' || paused) return;
-  // le J2 rejoint en cours de partie : Entrée du pavé numérique
-  if (e.code === 'NumpadEnter' && G && !G.players[1].active) { joinPlayer(G.players[1]); return; }
+  // un joueur au clavier pavé rejoint en cours de partie : Entrée du pavé numérique
+  if (e.code === 'NumpadEnter') { const s = DM.kb2 >= 0 ? DM.kb2 : G.players.findIndex(q => !q.active); if (s >= 0) { if (DM.kb2 < 0) { CTRL.slots[s] === 'auto' && (DM.kb2 = s); } joinSlot(s); } return; }
   if (KEYS[k]) {
-    const d = KEYS[k], i = keySlot(k); e.preventDefault();
+    const d = KEYS[k], i = keySlot(k); if (i < 0) return; e.preventDefault();
     if (!e.repeat && (d === 'l' || d === 'r')) { const now = performance.now(); if (lastTap[i].d === d && now - lastTap[i].t < 260) INP[i].runReq = 1; lastTap[i] = { d, t: now }; }
     held[i].add(d); keyDir(i); return;
   }
   if (e.repeat) return;
-  if (P2PAD[e.code]) { INP[NPLAYERS > 1 ? 1 : 0][P2PAD[e.code]] = 1; e.preventDefault(); return; }
-  if (k === 'j' || k === 'x') inp.atk = 1;
-  else if (k === 'i' || k === 'h') inp.kick = 1;
-  else if (k === 'k' || k === ' ' || k === 'c') { inp.jump = 1; e.preventDefault(); }
-  else if (k === 'u') inp.heavy = 1;
-  else if (k === 'o') inp.sup2 = 1;
-  else if (k === 'n') inp.sweep = 1;
-  else if (k === 'l' || k === 'v') inp.pow = 1;
-  else if (k === 'shift' || k === 'u' || k === 'b') inp.dash = 1;
+  if (P2PAD[e.code]) { const s = DM.kb2 >= 0 ? DM.kb2 : DM.kb1; if (s >= 0) INP[s][P2PAD[e.code]] = 1; e.preventDefault(); return; }
+  const a = keyAction(k); if (a && a !== 'pause' && DM.kb1 >= 0) { INP[DM.kb1][a] = 1; if (k === ' ' || a === 'jump') e.preventDefault(); }
 });
-addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (KEYS[k]) { const i = keySlot(k); held[i].delete(KEYS[k]); keyDir(i); if (!held[i].has('l') && !held[i].has('r')) INP[i].runReq = 0; } });
-// manettes (API Gamepad) : A saut, X frappe, Y pied, B esquive, RB/RT Tempête, Start pause (ou rejoindre pour le J2)
-// à deux : 2 manettes = J1 et J2 ; 1 seule manette = J2 (le J1 joue au clavier)
+addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (KEYS[k]) { const i = keySlot(k); if (i < 0) return; held[i].delete(KEYS[k]); keyDir(i); if (!held[i].has('l') && !held[i].has('r')) INP[i].runReq = 0; } });
 let padPrev = {};
-function padSlot(gi, n) { if (NPLAYERS < 2) return 0; if (n >= 2) return gi === 0 ? 0 : 1; return 1; }
 function pollPad() {
-  const raw = navigator.getGamepads ? navigator.getGamepads() : [], pads = [];
-  for (const g of raw) if (g && g.connected) pads.push(g);
-  const used = [false, false];
+  const pads = connectedPads(); if (pads.length !== DM.pad.length || pads.some((g, i) => DM.pads[i] !== g && (!DM.pads[i] || DM.pads[i].index !== g.index))) DM = devMap();
+  const used = [false, false, false, false];
   pads.forEach((gp, gi) => {
-    if (gi > 1) return;
-    const slot = padSlot(gi, pads.length), I = INP[slot], prev = padPrev[gp.index] || [];
+    const slot = DM.pad[gi], prev = padPrev[gp.index] || [];
     const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), edge = i => b(i) && !prev[i];
+    // réaffectation : le prochain bouton pressé prend l'action choisie
+    if (remapWait && remapWait.kind === 'pad') { for (let i = 0; i < gp.buttons.length; i++) if (edge(i) && i < 12) { const old = CTRL.pad[remapWait.act]; for (const a in CTRL.pad) if (CTRL.pad[a] === i) CTRL.pad[a] = old; CTRL.pad[remapWait.act] = i; saveCtrl(); remapWait = null; renderCtrl(); break; } padPrev[gp.index] = gp.buttons.map(x => x.pressed); return; }
+    const P = CTRL.pad, act = a => edge(P[a]);
     let ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
     if (b(14)) ax = -1; if (b(15)) ax = 1; if (b(12)) ay = -1; if (b(13)) ay = 1;
-    I.gx = Math.abs(ax) > .35 ? Math.sign(ax) : 0; I.gy = Math.abs(ay) > .35 ? Math.sign(ay) : 0; used[slot] = true;
-    if (state === 'play' && !paused) { if (edge(0)) I.jump = 1; if (edge(2)) I.atk = 1; if (edge(3)) I.kick = 1; if (edge(1)) I.dash = 1; if (edge(4) || edge(7)) I.pow = 1; if (edge(5)) I.heavy = 1; if (edge(6)) I.sup2 = 1; }
-    // START sur une 2e manette : le J2 rejoint (ou revient avec un crédit)
-    if (edge(9) && state === 'play' && G && gi === 1 && !G.players[1].active) { NPLAYERS = 2; joinPlayer(G.players[1]); }
-    else if (edge(9) && state === 'play' && G && G.players[slot].st === 'out') rejoin(G.players[slot]);
-    else if (edge(9)) { if (state === 'play') setPause(!paused); else if (state === 'title') { audio(); startGame(); } else if (state === 'cine') endIntro(); }
+    if (slot >= 0) { const I = INP[slot]; I.gx = Math.abs(ax) > .35 ? Math.sign(ax) : 0; I.gy = Math.abs(ay) > .35 ? Math.sign(ay) : 0; used[slot] = true;
+      if (state === 'play' && !paused && G && G.players[slot].active) for (const a of ['jump', 'atk', 'kick', 'dash', 'pow', 'heavy', 'sup2', 'sweep']) if (act(a)) I[a] = 1; }
+    if (!$('ctrl').hidden) { if (edge(1)) closeCtrl(); padPrev[gp.index] = gp.buttons.map(x => x.pressed); return; }
+    // écran titre : la croix choisit le héros de cette manette, START lance
+    if (state === 'title' && slot >= 0) { if (edge(14) || edge(15)) { const i = HERO_IDS.indexOf(PICK[slot]); pickHero(slot, HERO_IDS[(i + (edge(15) ? 1 : HERO_IDS.length - 1)) % HERO_IDS.length]); } }
+    if (act('pause') || edge(9)) {
+      if (state === 'play' && G && slot >= 0 && (!G.players[slot].active || G.players[slot].st === 'out')) joinSlot(slot);
+      else if (state === 'play') setPause(!paused); else if (state === 'title') { audio(); startGame(); } else if (state === 'cine') endIntro();
+    }
     if (edge(0) && state === 'talk') nextTalk(); if (edge(0) && state === 'cine') endIntro();
     if (edge(0) && state === 'story') $('bNext').click();
     if (edge(0) && state === 'over' && !$('bRetry').hidden) retry();
     padPrev[gp.index] = gp.buttons.map(x => x.pressed);
   });
-  for (let i = 0; i < 2; i++) if (!used[i]) INP[i].gx = INP[i].gy = 0;
+  for (let i = 0; i < MAXP; i++) if (!used[i]) INP[i].gx = INP[i].gy = 0;
 }
 // la manette doit aussi répondre en pause et sur les menus
 setInterval(() => { if (state !== 'play' || paused) pollPad(); }, 50);
+/* ---------- Écran « Contrôles » ---------- */
+const DEVLBL = { auto: 'Auto', kb1: 'Clavier', kb2: 'Clavier (flèches + pavé num.)', none: 'Aucun' };
+function devName(d) { if (DEVLBL[d]) return DEVLBL[d]; const i = +d[3]; const g = connectedPads()[i]; return 'Manette ' + (i + 1) + (g ? ' · ' + ({ xbox: 'Xbox', ps: 'PlayStation', std: 'générique' })[padType(g)] : ' (absente)'); }
+function renderCtrl() {
+  DM = devMap(); const pads = connectedPads(), t = pads.length ? padType(pads[0]) : 'xbox';
+  $('cPads').innerHTML = pads.length ? pads.map((g, i) => '<span class="cpad">🎮 ' + (i + 1) + ' · ' + ({ xbox: 'Xbox', ps: 'PlayStation', std: 'Manette' })[padType(g)] + ' → ' + (DM.pad[i] >= 0 ? '<b style="color:' + SLOTCSS[DM.pad[i]] + '">J' + (DM.pad[i] + 1) + '</b>' : 'libre') + '</span>').join('') : '<span class="cpad">Aucune manette détectée : branche-la ou appuie sur un de ses boutons.</span>';
+  const opts = ['auto', 'kb1', 'kb2', 'pad0', 'pad1', 'pad2', 'pad3', 'none'];
+  $('cSlots').innerHTML = [0, 1, 2, 3].map(s => '<label style="--sc:' + SLOTCSS[s] + '"><b>J' + (s + 1) + '</b><select data-s="' + s + '">' + opts.map(o => '<option value="' + o + '"' + (CTRL.slots[s] === o ? ' selected' : '') + '>' + devName(o) + '</option>').join('') + '</select><i>' + (DM.kb1 === s ? 'clavier ' : '') + (DM.kb2 === s ? 'pavé ' : '') + DM.pad.map((x, i) => x === s ? '🎮' + (i + 1) + ' ' : '').join('') + (s === 0 ? '· tactile' : '') + '</i></label>').join('');
+  const kn = k => k === ' ' ? 'Espace' : k.length === 1 ? k.toUpperCase() : k.replace('shift', 'Maj').replace('arrow', '');
+  $('cMap').innerHTML = '<tr><th>Action</th><th>Manette (' + ({ xbox: 'Xbox', ps: 'PlayStation', std: 'générique' })[t] + ')</th><th>Clavier J1</th></tr>' + ACTIONS.map(([a, l]) => '<tr><td>' + l + '</td><td><button class="opt' + (remapWait && remapWait.kind === 'pad' && remapWait.act === a ? ' on' : '') + '" data-k="pad" data-a="' + a + '">' + (remapWait && remapWait.kind === 'pad' && remapWait.act === a ? 'Appuie…' : btnName(CTRL.pad[a], t)) + '</button></td><td><button class="opt' + (remapWait && remapWait.kind === 'key' && remapWait.act === a ? ' on' : '') + '" data-k="key" data-a="' + a + '">' + (remapWait && remapWait.kind === 'key' && remapWait.act === a ? 'Appuie…' : kn(CTRL.key[a])) + '</button></td></tr>').join('');
+}
+function openCtrl() { $('ctrl').hidden = false; renderCtrl(); }
+function closeCtrl() { remapWait = null; $('ctrl').hidden = true; DM = devMap(); renderPick(); }
+$('bCtrl').addEventListener('click', openCtrl); $('cClose').addEventListener('click', closeCtrl);
+$('cReset').addEventListener('click', () => { CTRL.slots = ['auto', 'auto', 'auto', 'auto']; CTRL.pad = Object.assign({}, DEF_PAD); CTRL.key = Object.assign({}, DEF_KEY); saveCtrl(); remapWait = null; renderCtrl(); });
+$('cSlots').addEventListener('change', e => { const s = e.target.dataset.s; if (s == null) return; const v = e.target.value; if (v !== 'auto' && v !== 'none') CTRL.slots.forEach((d, i) => { if (d === v && i !== +s) CTRL.slots[i] = 'auto'; }); CTRL.slots[+s] = v; saveCtrl(); renderCtrl(); });
+$('cMap').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; remapWait = { kind: b.dataset.k, act: b.dataset.a }; renderCtrl(); });
 function bindBtn(id, key) {
   const b = $(id);
   b.addEventListener('pointerdown', e => { e.preventDefault(); audio(); b.classList.add('on'); if (state === 'play' && !paused) inp[key] = 1; });
@@ -2460,5 +2515,5 @@ window.GAME = new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' }, fps: { target: 60 },
   scene: [Play]
 });
-window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join() { NPLAYERS = 2; joinPlayer(G.players[1]); }, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
+window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join(s) { joinPlayer(G.players[s || 1]); }, devMap: () => devMap(), CTRL, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
 })();

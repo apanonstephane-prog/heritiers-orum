@@ -82,6 +82,19 @@ body.touch #boss{width:min(360px,34vw)}
 .ic{width:38px;height:38px;border-radius:10px;border:1.5px solid rgba(247,238,223,.35);background:rgba(11,7,20,.55);color:var(--paper);display:grid;place-items:center;cursor:pointer}
 .ic svg{width:18px;height:18px}
 
+/* 3-4 joueurs */
+#hud.quad .bar{width:min(150px,12vw)}#hud.quad .bar.en{width:min(120px,10vw)}#hud.quad .face{width:38px;height:38px}#hud.quad .pcard{gap:6px}#hud.quad .nm small,#hud.quad .rank{display:none}#hud.quad .nm{font-size:10px}#hud.quad{gap:8px}
+.pcard.p3 .face{border-color:#8dff6a}.pcard.p3 .bar i{background:linear-gradient(90deg,#3bbf4a,#b9ff8a)}
+.pcard.p4 .face{border-color:#ff6ad5}.pcard.p4 .bar i{background:linear-gradient(90deg,#d63fa8,#ffaae8)}
+/* Contrôles */
+#ctrl{background:rgba(11,7,20,.96)}
+.heroes.many .hc{width:48px;padding:3px}.heroes.many .hc i{width:38px;height:38px}.heroes.many .hc b{font-size:9px}.heroes.many{gap:3px}
+.cbox{max-width:min(760px,100%);gap:10px;text-align:left;align-items:stretch}
+.cpads{display:flex;flex-wrap:wrap;gap:6px}.cpad{font:600 12px/1.3 var(--ui);background:rgba(11,7,20,.6);border:1px solid rgba(247,238,223,.2);border-radius:8px;padding:6px 10px}
+.cslots{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.cslots label{display:flex;align-items:center;gap:8px;font:600 12px var(--ui)}.cslots b{color:var(--sc);width:22px}.cslots select{flex:1;min-width:0;background:#140c22;color:var(--paper);border:1px solid rgba(247,238,223,.3);border-radius:6px;padding:5px;font:600 12px var(--ui)}.cslots i{font-style:normal;color:var(--mute);font-size:11px;white-space:nowrap}
+.cmap{border-collapse:collapse;width:100%;font:600 12px var(--ui)}.cmap th{color:var(--mute);text-align:left;font-weight:600;padding:3px}.cmap td{padding:2px 3px}.cmap .opt{padding:5px 10px;min-width:80px}
+#padToast{position:absolute;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:9;background:rgba(11,7,20,.9);border:1px solid var(--teal);border-radius:999px;padding:8px 16px;font:600 13px var(--ui);opacity:0;transition:.3s;pointer-events:none}#padToast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:700px){.cslots{grid-template-columns:1fr}}
 /* Choix des héros */
 .heroes{display:flex;flex-direction:column;gap:6px}
 .hrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -193,6 +206,10 @@ h1 em{font-style:normal;color:var(--gold)}
       <div class="bars"><div class="nm"><span id="pName">Amara</span> <small>J1</small><span class="rank" id="rank"></span><span class="lives" id="lives"></span></div><div class="bar" id="hpBar"><b></b><i></i></div><div class="bar en" id="enBar"><i></i></div><div class="wpn" id="wpn" hidden></div></div></div>
     <div class="pcard p2" id="hud2" hidden><div class="face" id="pFace2"></div>
       <div class="bars"><div class="nm"><span id="pName2">Amara</span> <small>J2</small><span class="rank" id="rank2"></span><span class="lives" id="lives2"></span></div><div class="bar" id="hpBar2"><b></b><i></i></div><div class="bar en" id="enBar2"><i></i></div><div class="wpn" id="wpn2" hidden></div></div></div>
+    <div class="pcard p3" id="hud3" hidden><div class="face" id="pFace3"></div>
+      <div class="bars"><div class="nm"><span id="pName3">Amara</span> <small>J3</small><span class="rank" id="rank3"></span><span class="lives" id="lives3"></span></div><div class="bar" id="hpBar3"><b></b><i></i></div><div class="bar en" id="enBar3"><i></i></div><div class="wpn" id="wpn3" hidden></div></div></div>
+    <div class="pcard p4" id="hud4" hidden><div class="face" id="pFace4"></div>
+      <div class="bars"><div class="nm"><span id="pName4">Amara</span> <small>J4</small><span class="rank" id="rank4"></span><span class="lives" id="lives4"></span></div><div class="bar" id="hpBar4"><b></b><i></i></div><div class="bar en" id="enBar4"><i></i></div><div class="wpn" id="wpn4" hidden></div></div></div>
     <div class="score"><span>Score</span><b id="score">000000</b><span id="credits"></span></div>
   </div>
   <div id="combo"><b id="comboN">0</b><span>COMBO</span></div>
@@ -224,11 +241,11 @@ h1 em{font-style:normal;color:var(--gold)}
       <span class="eyebrow">Acte I · Les Quartiers suspendus</span>
       <h1>Les Héritiers <em>d'Orun</em></h1>
       <p class="tag">Nova-Kemet tombe. Sombre-Lune vide les Orishas-machines qui la portent. Amara, lame-tempête des Gardiens, descend vers le cœur du Marché Haut.</p>
-      <div class="row opts"><button class="opt on" id="m1p">1 joueur</button><button class="opt" id="m2p">2 joueurs</button><span class="sep"></span><button class="opt" id="d-facile">Facile</button><button class="opt" id="d-normal">Normal</button><button class="opt" id="d-difficile">Difficile</button></div>
-      <div class="heroes" id="heroPick"><div class="hrow" id="hrow0"></div><div class="hrow" id="hrow1" hidden></div><p class="hinfo" id="hinfo"></p></div>
-      <div class="row"><button class="go" id="bStart">Commencer</button><span class="sub" id="best"></span></div>
+      <div class="row opts"><button class="opt on" id="m1p">1 joueur</button><button class="opt" id="m2p">2</button><button class="opt" id="m3p">3</button><button class="opt" id="m4p">4 joueurs</button><span class="sep"></span><button class="opt" id="d-facile">Facile</button><button class="opt" id="d-normal">Normal</button><button class="opt" id="d-difficile">Difficile</button></div>
+      <div class="heroes" id="heroPick"><div class="hrow" id="hrow0"></div><div class="hrow" id="hrow1" hidden></div><div class="hrow" id="hrow2" hidden></div><div class="hrow" id="hrow3" hidden></div><p class="hinfo" id="hinfo"></p></div>
+      <div class="row"><button class="go" id="bStart">Commencer</button><button class="go ghost" id="bCtrl">Contrôles 🎮</button><span class="sub" id="best"></span></div>
       <div class="keys small" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>U</b>coup lourd</span><span><b>I</b>pied</span><span><b>N</b> ou <b>↓+I</b>balayette</span><span><b>K</b>saut (J / I en l'air)</span><span><b>L</b>super 1</span><span><b>O</b>super 2 (75 %)</span><span><b>Maj</b>esquive</span><span><b>Contre un ennemi</b>prise · J genou · K dans son dos · arrière+J projection</span><span><b>Direction + L</b>ruée</span><span><b>Manette</b>compatible</span></div>
-      <div class="keys small" id="keys2" hidden><span><b>J2 clavier</b>flèches · pavé 1 frappe · 5 lourd · 4 pied · 7 balayette · 2 saut · 3 Tempête · 6 Foudre · 0 esquive</span><span><b>Manettes</b>2 manettes = J1 + J2 · 1 manette = J2</span><span><b>En cours de partie</b>START sur la 2e manette (ou Entrée du pavé) pour rejoindre</span></div>
+      <div class="keys small" id="keys2" hidden><span><b>Manettes</b>Xbox / PlayStation : une par joueur, détectées automatiquement</span><span><b>Sans manette</b>J2 au clavier : flèches + pavé numérique</span><span><b>En cours de partie</b>START sur une manette (ou Entrée du pavé) pour rejoindre</span><span><b>Contrôles 🎮</b>affectation des joueurs et des touches</span></div>
     </div>
   </div>
 
@@ -257,8 +274,20 @@ h1 em{font-style:normal;color:var(--gold)}
     <button id="cskip">Passer ›</button>
   </div>
 
+  <div class="screen" id="ctrl" hidden>
+    <div class="card cbox">
+      <span class="eyebrow">Contrôles</span>
+      <div class="cpads" id="cPads"></div>
+      <div class="cslots" id="cSlots"></div>
+      <table class="cmap" id="cMap"></table>
+      <p class="sub">Clique sur une touche puis appuie sur le bouton de la manette (ou la touche du clavier) à lui donner. Les manettes Xbox et PlayStation sont reconnues automatiquement. START (Menu / Options) fait rejoindre un joueur en cours de partie.</p>
+      <div class="row"><button class="go" id="cClose">Valider</button><button class="go ghost" id="cReset">Par défaut</button></div>
+    </div>
+  </div>
+  <div id="padToast"></div>
+
   <div id="loading"><div>Nova-Kemet se charge<span><i id="lbar"></i></span></div></div>
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=22" charset="utf-8"></script>
+<script src="game.js?v=24" charset="utf-8"></script>
