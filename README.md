@@ -23,6 +23,7 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 - `intro/` : cinématique (8 plans Higgsfield, dont 4 animés avec Kling 4.0).
 
 ## Actes
+Chaque acte se termine par une cinématique (plans dans `cine/`, séquences `CINES` dans `game.js`) ; celle de l'Acte VI est la fin du jeu.
 - **Acte I · Les Quartiers suspendus** : décor à la racine, boss Oba Ferrum.
 - **Acte II · Les Jardins-Turbines** : dossier `l2/` (décor, `atlas_l2*` Faucheuse + Yewa-Nul), rafales de vent, spores, lianes. Sources dans `pipeline/src/l2` et `pipeline/frames/l2`, specs `spec_l2*.json`.
 - **Acte III · Les Docks des Nuages** : `l3/`, harponneurs + Commandante Ìjì, bombardements.

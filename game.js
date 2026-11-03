@@ -1734,7 +1734,7 @@ function begin() {
 }
 function bossIntro() {
   $('tip').hidden = true; tipT = 0; tipQ = [];
-  $('bossIntro').hidden = false; playTrack(LEVELS[LV].bossTrack); sfx.gong(); G.tsT = .3;
+  $('bossIntro').hidden = false; playTrack(LEVELS[LV].bossTrack); if (CINES[LV]) preloadIntro(CINES[LV]); sfx.gong(); G.tsT = .3;
   const go = () => { if (!BOSS_READY) { later(.3, go, true); return; } G.tsT = 1; $('bossIntro').hidden = true; spawnBoss(); tip('boss'); };
   later(2.4, go, true);
 }
@@ -1748,12 +1748,12 @@ function showOver() {
 function victory() {
   for (const p of G.players) if (p.active && p.st !== 'out' && p.st !== 'dead') { p.st = 'win'; p.vx = p.vy = 0; setClip(p, 'win', 12, false); }
   G.ended = true; playTrack('clear'); $('boss').hidden = true; $('bossIntro').hidden = true; $('tip').hidden = true; tipT = 0; tipQ = [];
-  cutscene(TK().win, () => {
+  cutscene(TK().win, () => playEndCine(() => {
   state = 'end'; document.body.classList.remove('playing'); saveBest(); later(4, () => playTrack('title'), true);
   $('hud').hidden = true; $('boss').hidden = true; $('bPause').hidden = true; showStory('end');
   $('stEy').textContent = END[0] + ' · Score ' + String(Math.floor(G.score)).padStart(6, '0');
   setTimeout(() => playTrack('title'), 6000);
-  });
+  }));
 }
 function clearCombo() { $('combo').style.opacity = 0; $('buff').hidden = true; }
 function saveBest() { clearCombo(); const s = Math.floor(G.score); if (s > best) { best = s; try { localStorage.setItem('orun-best', String(best)); } catch (e) {} } }
@@ -1987,26 +1987,28 @@ const SHOTS = [
   { t: 37.5, d: 8.5, kind: 'img', img: 'intro/k8.webp', flash: 1, shake: 1, title: 1, kb: [1.12, 1.0, 0, -.04] },
 ];
 const CINE_LEN = 46;
-const CN = { on: false, t0: 0, shot: -1, raf: 0, parts: [], bolts: [], vids: {}, cb: null, lastT: 0 };
-function preloadIntro() {
-  if (CN.pre) return; CN.pre = 1;
-  for (const s of SHOTS) {
+const CN = { S: SHOTS, len: CINE_LEN, track: 'intro', on: false, t0: 0, shot: -1, raf: 0, parts: [], bolts: [], vids: {}, cb: null, lastT: 0 };
+function preloadIntro(list) {
+  list = list || SHOTS; const key = list === SHOTS ? 'pre' : 'pre_' + list[1].img; if (CN[key]) return; CN[key] = 1;
+  for (const s of list) {
     if (s.img) { const im = new Image(); im.src = s.img; }
     if (s.src) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.preload = 'auto'; v.src = s.src; v.className = 'cvid'; v.onerror = () => { v.dead = 1; }; $('cine').insertBefore(v, $('cfx')); CN.vids[s.src] = v; try { v.load(); } catch (e) {} }
   }
 }
-function cineNow() { return MUSMAN.src && MUSMAN.cur === 'intro' && CN.audioT0 != null ? Math.max(0, AC.currentTime - CN.audioT0) : (performance.now() - CN.t0) / 1000; }
-function startIntro(after) {
-  preloadIntro(); audio();
-  CN.on = true; CN.cb = after; CN.shot = -1; CN.parts = []; CN.bolts = []; state = 'cine';
+function cineNow() { return CN.track === 'intro' && MUSMAN.src && MUSMAN.cur === 'intro' && CN.audioT0 != null ? Math.max(0, AC.currentTime - CN.audioT0) : (performance.now() - CN.t0) / 1000; }
+function startIntro(after) { startCine(SHOTS, CINE_LEN, 'intro', after); }
+function startCine(list, len, track, after, titleEy) {
+  CN.S = list; CN.len = len; CN.track = track; preloadIntro(list); audio();
+  $('ctitle').querySelector('.ey').textContent = titleEy || 'Acte I · Les Quartiers suspendus';
+  CN.on = true; CN.done = false; CN.cb = after; CN.shot = -1; CN.parts = []; CN.bolts = []; state = 'cine';
   for (const id of ['title', 'story', 'over']) $(id).hidden = true;
   const c = $('cine'); c.hidden = false; c.classList.remove('end');
   $('ctitle').classList.remove('on'); $('cnames').classList.remove('on'); $('ctext').classList.remove('on');
-  fitCine(); CN.audioT0 = null; MUSMAN.cur = null; CN.t0 = performance.now(); playTrack('intro');
+  fitCine(); CN.audioT0 = null; MUSMAN.cur = null; CN.t0 = performance.now(); playTrack(track);
   cancelAnimationFrame(CN.raf); CN.raf = requestAnimationFrame(cineFrame);
 }
-function endIntro() {
-  if (!CN.on) return; CN.on = false; cancelAnimationFrame(CN.raf);
+function endIntro(force) {
+  if (!CN.on || (!force && (CN.done || performance.now() - CN.t0 < 1200))) return; CN.on = false; cancelAnimationFrame(CN.raf);
   for (const v of Object.values(CN.vids)) { try { v.pause(); } catch (e) {} v.classList.remove('on'); }
   $('cine').hidden = true; const f = CN.cb; CN.cb = null; if (f) f();
 }
@@ -2015,7 +2017,7 @@ function setLayer(s, el) {
   el.style.backgroundImage = 'url(' + s.img + ')'; el.dataset.kb = JSON.stringify(s.kb || [1.05, 1, 0, 0]); el.dataset.t = s.t; el.dataset.d = s.d;
 }
 function enterShot(i) {
-  const s = SHOTS[i], c = $('cine'); CN.shot = i;
+  const s = CN.S[i], c = $('cine'); CN.shot = i;
   // calques image en fondu enchaîné
   const a = $('cl0'), b = $('cl1'), front = a.classList.contains('on') ? b : a, back = front === a ? b : a;
   if (s.kind !== 'black') { setLayer(s, front); front.classList.add('on'); back.classList.remove('on'); }
@@ -2033,15 +2035,15 @@ function enterShot(i) {
 function cineFrame() {
   if (!CN.on) return;
   const t = cineNow();
-  if (t >= CINE_LEN) { $('cine').classList.add('end'); setTimeout(endIntro, 900); CN.on = false; return; }
-  let i = 0; for (let k = 0; k < SHOTS.length; k++) if (t >= SHOTS[k].t) i = k;
+  if (t >= CN.len) { $('cine').classList.add('end'); CN.done = true; setTimeout(() => endIntro(true), 900); return; }
+  let i = 0; for (let k = 0; k < CN.S.length; k++) if (t >= CN.S[k].t) i = k;
   if (i !== CN.shot) enterShot(i);
   // Ken Burns : échelle et translation interpolées sur la durée du plan
   for (const el of [$('cl0'), $('cl1')]) {
     if (!el.dataset.kb) continue; const [s0, s1, dx, dy] = JSON.parse(el.dataset.kb), p = clamp((t - +el.dataset.t) / +el.dataset.d, 0, 1.2), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
     const sc = s0 + (s1 - s0) * e; el.style.transform = `translate3d(${dx * e * 100}%,${dy * e * 100}%,0) scale(${sc})`;
   }
-  const s = SHOTS[i], v = s.kind === 'vid' && CN.vids[s.src];
+  const s = CN.S[i], v = s.kind === 'vid' && CN.vids[s.src];
   if (v && v.classList.contains('on')) { const p = clamp((t - s.t) / s.d, 0, 1); v.style.transform = `scale(${1 + .04 * p})`; }
   drawCineFx(t, s);
   CN.raf = requestAnimationFrame(cineFrame);
@@ -2068,7 +2070,65 @@ function drawCineFx(t, s) {
   if (s.title && Math.random() < .015) CN.bolts.push({ life: .2, x: .3 + Math.random() * .4 });
   g.globalCompositeOperation = 'source-over';
 }
-$('cskip').addEventListener('click', e => { e.stopPropagation(); endIntro(); });
+/* ---------- Cinématiques de fin d'acte ---------- */
+function mkCine(rows) {
+  let t = 0; const out = rows.map(([kind, n, d, ey, tx, x]) => { const s = Object.assign({ t, d, kind, ey, tx }, x || {}); if (n) { s.img = 'cine/' + n + '.webp'; if (kind === 'vid') s.src = 'cine/' + n + '.mp4'; } t += d; return s; });
+  out.len = t + 1; return out;
+}
+const KB = [[1.0, 1.1, 0, -.02], [1.14, 1.02, .02, -.02], [1.04, 1.14, -.03, .02], [1.12, 1.0, 0, .03]];
+const CINES = [
+  mkCine([
+    ['black', null, 3, 'Acte I accompli', 'Le Marché Haut est libéré.'],
+    ['img', 'c1a', 4.5, 'Oba Ferrum', 'Libéré de ses chaînes, l\'esprit de la forge rallume le réacteur.', { kb: KB[0], flash: 1 }],
+    ['vid', 'c1b', 5, 'Le Marché Haut', 'Les lanternes se rallument. Les quartiers suspendus respirent à nouveau.', { kb: KB[1] }],
+    ['img', 'c1c', 4.5, 'Une voix dans les ondes', 'Nyx Adébayo. L\'ancienne maîtresse d\'armes d\'Amara sert désormais Sombre-Lune.', { kb: KB[2] }],
+    ['vid', 'c1d', 5, 'Prochaine étape', 'Les Jardins-Turbines, où l\'esprit Yewa est retenu.', { kb: KB[3] }]
+  ]),
+  mkCine([
+    ['black', null, 3, 'Acte II accompli', 'Le vent souffle de nouveau sur les Jardins.'],
+    ['vid', 'c2a', 5, 'Yewa', 'L\'esprit des feuilles et du vent retrouve son souffle.', { kb: KB[0], flash: 1 }],
+    ['img', 'c2b', 4.5, 'Amara et Kofi', 'Pour la première fois depuis des semaines, les serres sentent la sève et non le métal.', { kb: KB[1] }],
+    ['img', 'c2c', 4.5, 'Ọ̀run-Zéro', 'Mais là-haut, la grande arche de Sombre-Lune est presque chargée.', { kb: KB[2] }],
+    ['vid', 'c2d', 5, 'Prochaine étape', 'Pour monter jusqu\'à elle, il faut un dirigeable. Direction les Docks des Nuages.', { kb: KB[3] }]
+  ]),
+  mkCine([
+    ['black', null, 3, 'Acte III accompli', 'Les Docks des Nuages sont tombés.'],
+    ['vid', 'c3a', 5, 'Les cales s\'ouvrent', 'Le vaisseau amiral s\'échoue, et des dizaines d\'esprits s\'envolent.', { kb: KB[0], flash: 1, shake: 1 }],
+    ['img', 'c3b', 4.5, 'Commandante Ìjì', 'Vaincue, mais pas soumise. Sombre-Lune saura qu\'Amara arrive.', { kb: KB[1] }],
+    ['img', 'c3c', 4.5, 'Le journal de bord', 'Une destination revient sans cesse : les Bassins d\'Ọ̀ṣun, sous la cité.', { kb: KB[2] }],
+    ['vid', 'c3d', 5, 'Prochaine étape', 'Le vieux cargo de Kofi plonge vers les eaux sacrées.', { kb: KB[3] }]
+  ]),
+  mkCine([
+    ['black', null, 3, 'Acte IV accompli', 'L\'eau chante de nouveau.'],
+    ['vid', 'c4a', 5, 'Ọ̀ṣun', 'Le poison se dissout. Les bassins redeviennent clairs et dorés.', { kb: KB[0], flash: 1 }],
+    ['img', 'c4b', 4.5, 'La perle de rivière', 'Ọ̀ṣun confie à Amara une perle : « Elle te montrera le vrai chemin. »', { kb: KB[1] }],
+    ['vid', 'c4c', 5, 'Nova-Kemet', 'Dans toute la cité, les fontaines retrouvent leur couleur.', { kb: KB[2] }],
+    ['img', 'c4d', 4.5, 'Prochaine étape', 'Zuri attend aux Archives d\'Ifá… où quelqu\'un s\'amuse avec les reflets.', { kb: KB[3] }]
+  ]),
+  mkCine([
+    ['black', null, 3, 'Acte V accompli', 'Tous les chemins disent enfin la vérité.'],
+    ['vid', 'c5a', 5, 'La salle des miroirs', 'Les miroirs se brisent, et chaque éclat montre la même route.', { kb: KB[0], flash: 1, shake: 1 }],
+    ['img', 'c5b', 4.5, 'Ẹ̀ṣù', '« Ton ancienne maîtresse t\'attend, Gardienne. Elle croit encore sauver la cité. »', { kb: KB[1] }],
+    ['img', 'c5c', 4.5, 'Les héritiers', 'Kofi, Amara et Zuri, ensemble, face à la Flèche d\'Ọ̀run.', { kb: KB[2], names: 1 }],
+    ['vid', 'c5d', 5, 'Dernière étape', 'La passerelle monte jusqu\'au sommet. Ce soir, tout se joue.', { kb: KB[3] }]
+  ]),
+  mkCine([
+    ['black', null, 3, 'Le sommet', 'Ọ̀run-Zéro retient tous les esprits de la cité.'],
+    ['img', 'c6a', 4.5, 'Le cœur d\'Ọ̀run-Zéro', 'Amara pourrait le détruire. La cité tomberait avec lui.', { kb: KB[0] }],
+    ['vid', 'c6b', 5, 'Le geste juste', 'Alors elle coupe toutes les chaînes, d\'un seul geste.', { kb: KB[1], flash: 1, shake: 1, bolt: 1 }],
+    ['vid', 'c6c', 5, 'Libres', 'Les esprits s\'envolent au-dessus de Nova-Kemet.', { kb: KB[2] }],
+    ['img', 'c6d', 4.5, 'Nyx Adébayo', '« Tu avais raison, Amara. On ne possède pas un esprit… on le porte. »', { kb: KB[3] }],
+    ['vid', 'c6e', 5, 'La descente', 'La cité ne tombe pas. Portée par ses esprits, elle se pose doucement sur les nuages.', { kb: KB[0] }],
+    ['img', 'c6f', 4.5, 'Les héritiers', 'Kofi, Amara et Zuri. La famille est réunie.', { kb: KB[1], names: 1 }],
+    ['vid', 'c6g', 5, 'Nova-Kemet', 'Ce soir, toute la cité danse.', { kb: KB[2] }],
+    ['img', 'c6h', 8, '', '', { kb: [1.12, 1.0, 0, -.03], flash: 1, title: 1 }]
+  ])
+];
+function playEndCine(after) {
+  const c = CINES[LV]; if (!c) { after(); return; }
+  startCine(c, c.len, 'title', after, LV === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[LV + 1].name);
+}
+$('cskip').addEventListener('click', e => { e.stopPropagation(); endIntro(true); });
 addEventListener('resize', () => { if (CN.on) fitCine(); });
 
 /* ---------- Dialogues : radio (sans pause) et scènes (avec pause) ---------- */
@@ -2160,5 +2220,5 @@ window.GAME = new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' }, fps: { target: 60 },
   scene: [Play]
 });
-window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join() { NPLAYERS = 2; joinPlayer(G.players[1]); }, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
+window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join() { NPLAYERS = 2; joinPlayer(G.players[1]); }, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
 })();
