@@ -7,7 +7,7 @@ document.body.classList.toggle('touch', touch);
 if (touch) $('keys').innerHTML = '<span><b>Joystick</b>8 directions</span><span><b>Frappe</b>combo en 3 coups</span><span><b>Pied</b>renverse · bas = balayage</span><span><b>Saut</b>+ Frappe en l\'air</span><span><b>Tempête</b>jauge turquoise</span><span><b>Esquive</b>ruée invincible</span>';
 
 const VW = 960, VH = 540;
-const AV = '?v=25'; // version des ressources : à incrémenter à chaque mise à jour des atlas (sinon cache navigateur = images décalées)
+const AV = '?v=27'; // version des ressources : à incrémenter à chaque mise à jour des atlas (sinon cache navigateur = images décalées)
 const rnd = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -398,7 +398,13 @@ function setClip(a, clip, fps, loop, onEnd) {
   a.clip = clip; a.frames = C[clip]; a.fps = fps; a.loop = !!loop; a.at = 0; a.fi = -1; a.onEnd = onEnd || null; a.ended = false;
 }
 function animStep(a, dt) {
-  a.at += dt * a.fps; let i = Math.floor(a.at);
+  // marche : les jambes avancent exactement de la distance parcourue (plus de pieds qui patinent ni de jambes trop rapides)
+  const M = SC.META[a.kind], mx = a.x - (a.lx ?? a.x), my = a.y - (a.ly ?? a.y); a.lx = a.x; a.ly = a.y;
+  if (a.clip === 'walk' && M.walkD && dt > 0) {
+    const step = Math.max(M.walkD * a.scale / M.walkS, a.kind === 'chien' ? 0 : CHAR[a.kind].h * .45) * (a.run ? 1.4 : 1), per = step * M.walkS / a.frames.length, d = Math.hypot(mx, my * 1.25);
+    a.at += d > .05 ? Math.min(d / per, dt * 60) : dt * a.fps * .35;
+  } else a.at += dt * a.fps;
+  let i = Math.floor(a.at);
   if (i >= a.frames.length) { if (a.loop) { a.at %= a.frames.length; i = Math.floor(a.at); } else { i = a.frames.length - 1; if (!a.ended) { a.ended = true; const f = a.onEnd, fr = a.frames; a.onEnd = null; if (f) f(); if (a.frames !== fr) return; } } }
   a.fi = Math.min(i, a.frames.length - 1);
 }
