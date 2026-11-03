@@ -1,4 +1,4 @@
-# Les Héritiers d'Orun — Acte I
+# Les Héritiers d'Orun — Actes I et II
 
 Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu : https://heritiers-orun.vercel.app
 
@@ -21,6 +21,11 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 - `MUSIC.md` : les 11 morceaux à produire (6 pour l'Acte I), avec tempos, synchro de l'intro et prompts. Dépose les fichiers dans `music/` et liste-les dans `music/music.json` (`available`, `loops`) : le jeu les utilise à la place de la musique procédurale.
 - `STORY.md` : bible narrative (monde, personnages, 3 actes, 3 boss).
 - `intro/` : cinématique (8 plans Higgsfield, dont 4 animés avec Kling 4.0).
+
+## Actes
+- **Acte I · Les Quartiers suspendus** : décor à la racine, boss Oba Ferrum.
+- **Acte II · Les Jardins-Turbines** : dossier `l2/` (décor, `atlas_l2*` Faucheuse + Yewa-Nul), rafales de vent, spores, lianes. Sources dans `pipeline/src/l2` et `pipeline/frames/l2`, specs `spec_l2*.json`.
+- Score, vies, étoiles et crédits passent d'un acte à l'autre. Les données de chaque acte sont dans `LEVELS` (game.js).
 
 ## Structure
 - `index.html` : HUD, écrans, commandes tactiles. `game.js` : moteur (animation, IA, combat, boss, audio procédural).

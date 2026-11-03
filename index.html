@@ -183,7 +183,7 @@ h1 em{font-style:normal;color:var(--gold)}
   <div id="go" hidden>GO ▶</div>
   <div id="tip" hidden></div>
   <div id="radio"><div class="rf"></div><div><span class="rn"></span><span class="rt"></span></div></div>
-  <div id="boss" hidden><div class="face" id="bFace"></div><div style="flex:1;min-width:0"><div class="nm">Oba Ferrum <small id="bPhase">Colosse-Réacteur</small></div><div class="bar" id="bossBar"><b></b><i></i></div></div></div>
+  <div id="boss" hidden><div class="face" id="bFace"></div><div style="flex:1;min-width:0"><div class="nm"><span id="bName">Oba Ferrum</span> <small id="bPhase">Colosse-Réacteur</small></div><div class="bar" id="bossBar"><b></b><i></i></div></div></div>
 
   <div class="top">
     <button class="ic" id="bPause" aria-label="Pause" hidden><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
@@ -216,7 +216,7 @@ h1 em{font-style:normal;color:var(--gold)}
       <div class="row"><button class="go" id="bNext">Continuer</button><button class="go ghost" id="bSkip">Passer</button></div></div>
   </div>
 
-  <div class="screen" id="bossIntro" hidden><div class="card"><span class="eyebrow" style="color:var(--ember)">Gardien du Marché Haut</span><h2>Oba Ferrum</h2><p class="sub">Le Colosse-Réacteur, enchaîné par Sombre-Lune.</p><p class="sub" style="color:var(--paper)">« Gardienne… brise mes chaînes… ou tombe avec moi. »</p></div></div>
+  <div class="screen" id="bossIntro" hidden><div class="card"><span class="eyebrow" style="color:var(--ember)" id="biEy">Gardien du Marché Haut</span><h2 id="biName">Oba Ferrum</h2><p class="sub" id="biDesc">Le Colosse-Réacteur, enchaîné par Sombre-Lune.</p><p class="sub" style="color:var(--paper)" id="biLine">« Gardienne… brise mes chaînes… ou tombe avec moi. »</p></div></div>
 
   <div class="screen" id="pause" hidden><div class="card"><span class="eyebrow">Pause</span><div class="row"><button class="go" id="bResume">Reprendre</button><button class="go ghost" id="bQuit">Menu</button></div></div></div>
 
@@ -240,4 +240,4 @@ h1 em{font-style:normal;color:var(--gold)}
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=11" charset="utf-8"></script>
+<script src="game.js?v=12" charset="utf-8"></script>

@@ -93,7 +93,7 @@ function startMusic() {
   setInterval(() => {
     if (!AC || !mus) return;
     const M = mus.mode, ttl = M === 'title';
-    if (M !== 'stage1' && M !== 'boss1' && !ttl) { mus.next = AC.currentTime + .1; return; }
+    if (!/^(stage|boss)/.test(M || '') && !ttl) { mus.next = AC.currentTime + .1; return; }
     const beat = mus.boss ? .118 : ttl ? .17 : .136;
     while (mus.next < AC.currentTime + .3) {
       const t = mus.next, s = mus.step % 16, bar = Math.floor(mus.step / 16);
@@ -110,32 +110,64 @@ function startMusic() {
 
 /* ---------- Données de jeu ---------- */
 const CHAR = {
-  amara: { h: 200 }, milicien: { h: 204 }, tireuse: { h: 200 }, chien: { h: 112 }, brute: { h: 246 }, pretresse: { h: 214 }, ferrum: { h: 360 }
+  amara: { h: 200 }, milicien: { h: 204 }, tireuse: { h: 200 }, chien: { h: 112 }, brute: { h: 246 }, pretresse: { h: 214 }, ferrum: { h: 360 },
+  faucheuse: { h: 212 }, yewa: { h: 300 }
 };
 // zones du décor (coordonnées logiques)
 const TILE = 1260, OV = 140, STEP = TILE - OV;
-const ZFLOOR = [[334, 530], [334, 530], [342, 404], [342, 404], [314, 530]];
+const WORLD_W = TILE * 5 - OV * 4;
 function floorAt(x) {
   const k = clamp(Math.floor(x / STEP), 0, 4), f = (x - k * STEP);
   const a = ZFLOOR[k];
   if (k < 4 && f > STEP - 40) { const b = ZFLOOR[k + 1], t = clamp((f - (STEP - 40)) / (OV + 40), 0, 1); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
   return a;
 }
-const WORLD_W = TILE * 5 - OV * 4;
-// rencontres : bord gauche de l'arène + vagues
-const ENC = [
-  { L: 140, waves: [['milicien', 'milicien'], ['milicien', 'chien']], props: [[620, 0.55, 'crate'], [820, .85, 'barrel']] },
-  { L: 1180, waves: [['tireuse', 'milicien'], ['brute', 'milicien']], props: [[1500, .3, 'crate'], [1900, .7, 'cell'], [1620, .9, 'kiosk']] },
-  { L: 2480, event: 'debris', waves: [['chien', 'chien', 'tireuse'], ['pretresse', 'milicien*']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
-  { L: 3560, waves: [['brute', 'pretresse', 'milicien*'], ['chien*', 'tireuse*', 'milicien', 'milicien*']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
-  { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .3, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+/* ---------- Niveaux ---------- */
+// chaque acte : décor (dossier), sol praticable par tuile, rencontres, boss, textes
+const LEVELS = [
+  {
+    dir: '', name: 'Acte I · Les Quartiers suspendus', track: 'stage1', bossTrack: 'boss1', atlas: null,
+    zfloor: [[334, 530], [334, 530], [342, 404], [342, 404], [314, 530]],
+    ztint: [[255, 242, 224], [255, 238, 222], [226, 234, 255], [226, 234, 255], [255, 226, 206]],
+    enc: [
+      { L: 140, waves: [['milicien', 'milicien'], ['milicien', 'chien']], props: [[620, 0.55, 'crate'], [820, .85, 'barrel']] },
+      { L: 1180, waves: [['tireuse', 'milicien'], ['brute', 'milicien']], props: [[1500, .3, 'crate'], [1900, .7, 'cell'], [1620, .9, 'kiosk']] },
+      { L: 2480, event: 'debris', waves: [['chien', 'chien', 'tireuse'], ['pretresse', 'milicien*']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, waves: [['brute', 'pretresse', 'milicien*'], ['chien*', 'tireuse*', 'milicien', 'milicien*']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .3, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'ferrum', name: 'Oba Ferrum', sub: 'Colosse-Réacteur', face: 'face_ferrum.webp', ey: 'Gardien du Marché Haut', desc: 'Le Colosse-Réacteur, enchaîné par Sombre-Lune.', line: '« Gardienne… brise mes chaînes… ou tombe avec moi. »', phase2: 'Cœur à nu · Rage', crack: 'ARMURE FISSURÉE' },
+    intro: [
+      ['Nova-Kemet · 2311', 'Depuis trois siècles, la cité flotte au-dessus des nuages, portée par les Orishas-machines : des esprits anciens liés à ses réacteurs.'],
+      ['Sombre-Lune', 'Le conglomérat Sombre-Lune vide les esprits un à un pour alimenter Orun-Zéro, une arme orbitale. Privés de leurs gardiens, les quartiers suspendus commencent à tomber.'],
+      ['Amara Diallo', 'Dernière lame-tempête de la lignée des Gardiens, Amara descend vers le Marché Haut. Au cœur du réacteur, Oba Ferrum, protecteur du quartier, a été enchaîné et retourné contre les siens.']
+    ],
+    end: ['Acte I terminé', 'Libéré, le cœur d\'Oba Ferrum s\'apaise. Le colosse murmure : « Les Jardins-Turbines… ils y retiennent Yewa. » Kofi attend Amara aux portes des serres.']
+  },
+  {
+    dir: 'l2/', name: 'Acte II · Les Jardins-Turbines', track: 'stage2', bossTrack: 'boss2', atlas: 'l2',
+    zfloor: [[372, 528], [372, 528], [404, 470], [404, 470], [398, 516]],
+    ztint: [[255, 246, 228], [255, 246, 228], [236, 244, 255], [236, 244, 255], [236, 228, 255]],
+    enc: [
+      { L: 140, waves: [['faucheuse', 'milicien'], ['faucheuse', 'chien', 'milicien']], props: [[620, 0.5, 'crate'], [860, .85, 'barrel']] },
+      { L: 1180, waves: [['tireuse', 'faucheuse'], ['brute', 'faucheuse*']], props: [[1500, .3, 'crate'], [1880, .7, 'cell'], [1650, .9, 'kiosk']] },
+      { L: 2480, event: 'gusts', waves: [['chien', 'chien', 'faucheuse'], ['pretresse', 'faucheuse*']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, event: 'gusts', waves: [['brute*', 'faucheuse', 'tireuse'], ['faucheuse*', 'milicien*', 'chien*', 'tireuse']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .4, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'yewa', name: 'Yewa-Nul', sub: 'Esprit des vents', face: 'face_yewa.webp', ey: 'Gardienne des Jardins-Turbines', desc: 'L\'esprit des vents et des jardins, vidé et rempli de Nul.', line: '« Le vent… ne m\'écoute plus… Aide-moi à me souvenir, Gardienne. »', phase2: 'Tempête du Nul', crack: 'LE NUL SE FISSURE' },
+    intro: [
+      ['Acte II · Les Jardins-Turbines', 'Au-dessus du Marché Haut, les serres verticales nourrissent toute la cité. Leurs éoliennes géantes tournent sous le souffle de Yewa, l\'esprit des vents et des jardins.'],
+      ['Le Nul', 'Sombre-Lune a vidé Yewa et l\'a remplie de Nul, un vide qui dévore la sève. Les jardins se dessèchent, les turbines s\'emballent, et les faucheuses de la milice récoltent ce qui reste.'],
+      ['Kofi Mensah', 'Kofi, forgeron-boxeur et frère d\'armes d\'Amara, tient la radio depuis les docks des serres. « Monte jusqu\'au sanctuaire du vent, petite sœur. Je garde tes arrières. »']
+    ],
+    end: ['Acte II terminé', 'Libérée, Yewa reprend son souffle et les jardins reverdissent. Mais avant de s\'apaiser, elle murmure : « Ọ̀run-Zéro est presque chargée… La Flèche… » La suite de l\'aventure se prépare : l\'Acte III arrive bientôt.']
+  }
 ];
-const STORY = [
-  ['Nova-Kemet · 2311', 'Depuis trois siècles, la cité flotte au-dessus des nuages, portée par les Orishas-machines : des esprits anciens liés à ses réacteurs.'],
-  ['Sombre-Lune', 'Le conglomérat Sombre-Lune vide les esprits un à un pour alimenter Orun-Zéro, une arme orbitale. Privés de leurs gardiens, les quartiers suspendus commencent à tomber.'],
-  ['Amara Diallo', 'Dernière lame-tempête de la lignée des Gardiens, Amara descend vers le Marché Haut. Au cœur du réacteur, Oba Ferrum, protecteur du quartier, a été enchaîné et retourné contre les siens.']
-];
-const END = ['Acte I terminé', 'Libéré, le cœur d\'Oba Ferrum s\'apaise. Le colosse murmure : « Les Jardins-Turbines… ils y retiennent Yewa. » Kofi et Zuri attendent Amara aux portes de l\'Acte II.'];
+let LV = 0, ZFLOOR, ENC, ZTINT, STORY, END, CARRY = null;
+function setLevel(i) { LV = i; const L = LEVELS[i]; ZFLOOR = L.zfloor; ENC = L.enc; ZTINT = L.ztint; STORY = L.intro; END = L.end; }
+setLevel(0);
+const TK = () => TALKS[LV];
 
 /* ---------- Scène principale ---------- */
 let SC = null;   // scène
@@ -165,24 +197,36 @@ class Play extends Phaser.Scene {
     const bar = $('lbar');
     this.load.on('progress', v => bar.style.width = Math.round(v * 100) + '%');
     // décor d'abord (léger), puis les planches d'animation ; version allégée sur mobile (≈100 Mo de mémoire graphique au lieu de ≈300)
-    this.load.json('stage', 'stage.json'); this.load.json('props', 'props.json'); this.load.json('atlas', ATL.main + '.json');
-    for (let i = 0; i < 3; i++) this.load.image('st' + i, 'stage_' + i + '.webp');
-    this.load.image('sky', 'st_sky.webp'); this.load.image('fg', 'st_fg.webp'); this.load.image('props', 'props.webp');
-    for (let i = 0; i < ATL.mainPages; i++) this.load.image('m' + i, ATL.main + '_' + i + '.webp');
+    // décor de l'acte en cours (clés préfixées par le numéro d'acte : les textures survivent au redémarrage de scène)
+    const D = LEVELS[LV].dir, K = 'L' + LV, has = k => this.textures.exists(k) || this.cache.json.exists(k);
+    if (!has(K + 'stage')) this.load.json(K + 'stage', D + 'stage.json');
+    for (let i = 0; i < 3; i++) if (!has(K + 'st' + i)) this.load.image(K + 'st' + i, D + 'stage_' + i + '.webp');
+    if (!has(K + 'sky')) this.load.image(K + 'sky', D + 'st_sky.webp'); if (!has(K + 'fg')) this.load.image(K + 'fg', D + 'st_fg.webp');
+    if (!has('props')) { this.load.json('propsj', 'props.json'); this.load.image('props', 'props.webp'); }
+    if (!has('atlas')) this.load.json('atlas', ATL.main + '.json');
+    for (let i = 0; i < ATL.mainPages; i++) if (!has('m' + i)) this.load.image('m' + i, ATL.main + '_' + i + '.webp');
+    // planches propres à l'acte (nouvel ennemi + boss)
+    const X = LEVELS[LV].atlas;
+    if (X) { const n = (LITE ? 'm' : '') + X; if (!has('atlas' + X)) this.load.json('atlas' + X, D + 'atlas_' + n + '.json'); for (let i = 0; i < (LITE ? 1 : 2); i++) if (!has(X + 'p' + i)) this.load.image(X + 'p' + i, D + 'atlas_' + n + '_' + i + '.webp'); }
     this.load.on('loaderror', f => { LOADERR.push(f.key); });
   }
   create() {
     SC = this;
-    const need = ['atlas', 'stage', 'st0', 'st1', 'st2'].concat(Array.from({ length: ATL.mainPages }, (_, i) => 'm' + i));
+    const K = 'L' + LV, X = LEVELS[LV].atlas;
+    const need = ['atlas', K + 'stage', K + 'st0', K + 'st1', K + 'st2'].concat(Array.from({ length: ATL.mainPages }, (_, i) => 'm' + i), X ? ['atlas' + X] : []);
     const miss = need.filter(k => !(this.textures.exists(k) || this.cache.json.exists(k)));
     if (miss.length) { $('loading').innerHTML = '<div>Chargement incomplet (' + miss.join(', ') + ')<br><br><button class="go" onclick="location.reload()">Réessayer</button></div>'; return; }
     this.META = {}; regAtlas(this, this.cache.json.get('atlas'), 'm');
-    // atlas du boss chargé en arrière-plan pendant que l'on joue
-    this.load.json('atlasB', ATL.boss + '.json'); this.load.image('b0', ATL.boss + '_0.webp');
-    this.load.once('complete', () => { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; });
-    this.load.start();
-    const P = this.cache.json.get('props'); this.PROPS = P;
-    for (const k in P) { const [x, y, w, h] = P[k]; this.textures.get('props').add(k, 0, x, y, w, h); }
+    if (X) { regAtlas(this, this.cache.json.get('atlas' + X), X + 'p'); BOSS_READY = true; }
+    else if (this.cache.json.exists('atlasB') && this.textures.exists('b0')) { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; }
+    else {
+      // atlas du boss de l'acte I chargé en arrière-plan pendant que l'on joue
+      BOSS_READY = false; this.load.json('atlasB', ATL.boss + '.json'); this.load.image('b0', ATL.boss + '_0.webp');
+      this.load.once('complete', () => { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; });
+      this.load.start();
+    }
+    const P = this.cache.json.get('propsj'); this.PROPS = P;
+    for (const k in P) { const [x, y, w, h] = P[k]; if (!this.textures.get('props').has(k)) this.textures.get('props').add(k, 0, x, y, w, h); }
     // textures procédurales pour les effets
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 1); g.fillCircle(16, 16, 16); g.generateTexture('dot', 32, 32); g.clear();
@@ -193,12 +237,12 @@ class Play extends Phaser.Scene {
     g.fillStyle(0x000000, 1); g.fillEllipse(32, 10, 64, 20); g.generateTexture('shadow', 64, 20); g.destroy();
 
     // décor
-    const ST = this.cache.json.get('stage'); let x = 0;
+    const ST = this.cache.json.get(K + 'stage'); let x = 0;
     // ciel : une seule image en parallaxe lente (pas de TileSprite, fragile sur iOS)
-    if (this.textures.exists('sky')) { const k = Math.max(VH / 960, (VW + WORLD_W * .1 + 20) / 2240); this.add.image(0, -(960 * k - VH) * .4, 'sky').setOrigin(0).setScale(k).setScrollFactor(.1).setDepth(-20); }
-    for (let i = 0; i < ST.parts.length; i++) { const im = this.add.image(x, 0, 'st' + i).setOrigin(0).setScale(1 / ST.scale).setDepth(-10); x += im.displayWidth; }
+    if (this.textures.exists(K + 'sky')) { const k = Math.max(VH / 960, (VW + WORLD_W * .1 + 20) / 2240); this.add.image(0, -(960 * k - VH) * .4, K + 'sky').setOrigin(0).setScale(k).setScrollFactor(.1).setDepth(-20); }
+    for (let i = 0; i < ST.parts.length; i++) { const im = this.add.image(x, 0, K + 'st' + i).setOrigin(0).setScale(1 / ST.scale).setDepth(-10); x += im.displayWidth; }
     // premier plan : copies juxtaposées en parallaxe rapide
-    if (this.textures.exists('fg')) { const k = VH / 960, w = 2240 * k; for (let i = 0; i * w < WORLD_W * 1.3 + VW; i++) this.add.image(i * w, 0, 'fg').setOrigin(0).setScale(k).setScrollFactor(1.3).setDepth(9000).setAlpha(.9); }
+    if (this.textures.exists(K + 'fg')) { const k = VH / 960, w = 2240 * k; for (let i = 0; i * w < WORLD_W * 1.3 + VW; i++) this.add.image(i * w, 0, K + 'fg').setOrigin(0).setScale(k).setScrollFactor(1.3).setDepth(9000).setAlpha(.9); }
     this.tele = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
     this.fxg = this.add.graphics().setDepth(8000).setBlendMode(Phaser.BlendModes.ADD);
     this.bars = this.add.graphics().setDepth(8500);
@@ -213,19 +257,23 @@ class Play extends Phaser.Scene {
     try { this.cameras.main.postFX.addVignette(.5, .5, .92, .32); } catch (e) {}
     this.cameras.main.setOrigin(0, 0);
     this.applyZoom();
-    this.scale.on('resize', () => this.applyZoom());
-    $('loading').hidden = true; state = 'title';
+    if (!RESIZE_BOUND) { RESIZE_BOUND = true; this.scale.on('resize', () => { try { SC.applyZoom(); } catch (e) {} }); }
+    $('loading').hidden = true;
+    $('pFace').style.backgroundImage = 'url(face_amara.webp)'; $('pFace2').style.backgroundImage = 'url(face_amara.webp)';
+    const B = LEVELS[LV].boss; $('bFace').style.backgroundImage = 'url(' + B.face + ')'; $('bName').textContent = B.name; $('bPhase').textContent = B.sub;
+    $('biEy').textContent = B.ey; $('biName').textContent = B.name; $('biDesc').textContent = B.desc; $('biLine').textContent = B.line;
+    newGame(true);
+    if (CARRY) { $('title').hidden = true; showStory('intro'); return; } // passage à l'acte suivant : on enchaîne sur son récit
+    state = 'title';
     $('title').style.backgroundImage = 'linear-gradient(90deg,rgba(11,7,20,.92) 0%,rgba(11,7,20,.55) 46%,rgba(11,7,20,.1) 75%),url(st_sky.webp)';
-    $('pFace').style.backgroundImage = 'url(face_amara.webp)'; $('pFace2').style.backgroundImage = 'url(face_amara.webp)'; $('bFace').style.backgroundImage = 'url(face_ferrum.webp)';
     $('best').textContent = best ? 'Record ' + String(best).padStart(6, '0') : '';
     $('title').hidden = false;
-    newGame(true);
   }
   applyZoom() { this.cameras.main.setZoom(this.scale.width / VW); }
   update(time, delta) { tick(Math.min(delta, 50) / 1000); }
 }
 
-let BOSS_READY = false; const SEEN = {}; const LOADERR = [];
+let BOSS_READY = false, RESIZE_BOUND = false; const SEEN = {}; const LOADERR = [];
 const LITE = touch || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.deviceMemory && navigator.deviceMemory <= 4);
 const ATL = LITE ? { main: 'atlas_mmain', mainPages: 2, boss: 'atlas_mboss' } : { main: 'atlas_main', mainPages: 3, boss: 'atlas_boss' };
 function regAtlas(sc, A, tp) {
@@ -273,7 +321,7 @@ function actor(kind, x, y, face) {
 function newGame(demo) {
   if (G) { for (const e of G.all) { e.spr.destroy(); e.sh.destroy(); e.bub && e.bub.destroy(); } for (const p of G.props) p.spr.destroy(); for (const p of G.items) p.spr.destroy(); for (const s of G.shots) s.spr && s.spr.destroy(); }
   const D = DIFF[DIFFK];
-  G = { demo, t: 0, cam: 0, camMin: 0, lock: null, enc: 0, wave: 0, score: 0, combo: 0, comboT: 0, hitstop: 0, ts: 1, tsT: 1, all: [], en: [], props: [], items: [], shots: [], rings: [], beams: [], boss: null, ended: false, checkpoint: 0, kills: 0, tokens: 0, goT: 0, timers: [], said: {}, cont: D.cont, zoneTint: 0xffffff, players: [], event: null, pshots: [], haz: [] };
+  G = { demo, t: 0, cam: 0, camMin: 0, lock: null, enc: 0, wave: 0, score: 0, combo: 0, comboT: 0, hitstop: 0, ts: 1, tsT: 1, all: [], en: [], props: [], items: [], shots: [], rings: [], beams: [], boss: null, ended: false, checkpoint: 0, kills: 0, tokens: 0, goT: 0, timers: [], said: {}, cont: D.cont, zoneTint: 0xffffff, players: [], event: null, pshots: [], haz: [], clouds: [], gustT: 0, wind: 0 };
   G.players.push(newPlayer(0, 220, 430));
   G.players.push(newPlayer(1, 160, 470));
   if (!demo && NPLAYERS > 1) joinPlayer(G.players[1], true);
@@ -309,7 +357,9 @@ const ENEMY = {
   chien: { hp: 46, spd: 250, pts: 180 },
   brute: { hp: 150, spd: 70, pts: 400 },
   pretresse: { hp: 58, spd: 0, pts: 350 },
-  ferrum: { hp: 660, spd: 55, pts: 10000 }
+  ferrum: { hp: 660, spd: 55, pts: 10000 },
+  faucheuse: { hp: 84, spd: 105, pts: 260 },
+  yewa: { hp: 720, spd: 150, pts: 12000 }
 };
 // variantes élites : même dessin recoloré, comportement plus dangereux
 const ELITE = {
@@ -317,7 +367,8 @@ const ELITE = {
   chien: { name: 'ALPHA', tint: [170, 200, 255] },        // double bond
   tireuse: { name: 'TIREUSE D\'ÉLITE', tint: [255, 230, 140] }, // rafale de 3 tirs
   brute: { name: 'COLOSSE', tint: [255, 160, 120] },      // bouclier renforcé, onde plus large
-  pretresse: { name: 'GRANDE PRÊTRESSE', tint: [255, 170, 255] }
+  pretresse: { name: 'GRANDE PRÊTRESSE', tint: [255, 170, 255] },
+  faucheuse: { name: 'MOISSONNEUSE', tint: [255, 150, 120] } // fauche plus vite, spores plus larges
 };
 function spawn(kind, side, elite) {
   const cam = G.lock ? G.lock : G.cam, fl = floorAt(cam + VW / 2);
@@ -330,9 +381,10 @@ function spawn(kind, side, elite) {
   G.en.push(e); G.all.push(e); return e;
 }
 function spawnBoss() {
-  const L = G.lock;
-  const e = actor('ferrum', L + VW + 140, (floorAt(L + 600)[0] + floorAt(L + 600)[1]) / 2, -1);
-  e.hp = e.max = Math.round(ENEMY.ferrum.hp * DIFF[DIFFK].ehp * (NPLAYERS > 1 ? 1.5 : 1)); e.spd = ENEMY.ferrum.spd; e.st = 'bossEnter'; e.phase = 1; e.cd = 2; e.boss = true; e.dz = 2;
+  const L = G.lock, K = LEVELS[LV].boss.kind;
+  const e = actor(K, L + VW + 140, (floorAt(L + 600)[0] + floorAt(L + 600)[1]) / 2, -1);
+  e.hp = e.max = Math.round(ENEMY[K].hp * DIFF[DIFFK].ehp * (NPLAYERS > 1 ? 1.5 : 1)); e.spd = ENEMY[K].spd;
+  if (K === 'yewa') { e.x = L + VW - 260; e.hover = 420; e.st = 'yewaEnter'; e.shW = 2.2; } e.st = 'bossEnter'; e.phase = 1; e.cd = 2; e.boss = true; e.dz = 2;
   setClip(e, 'idle', 12, true); G.en.push(e); G.all.push(e); G.boss = e;
   $('boss').hidden = false; updBoss();
 }
@@ -394,7 +446,8 @@ function hitEnemy(e, dmg, kind, src) {
     return true;
   }
   let m = 1;
-  if (e.boss) { if (e.phase === 1 && kind !== 'power' && kind !== 'object' && kind !== 'heavy') m = .55; if (e.st === 'kneel') m = 1.6; if (e.phase === 2) m *= 1.1; }
+  if (e.boss && e.kind === 'yewa') { const air = src && src.isPlayer && src.z > 40; m = e.st === 'tired' ? 1.6 : air || kind === 'power' || kind === 'object' ? 1.1 : .5; }
+  else if (e.boss) { if (e.phase === 1 && kind !== 'power' && kind !== 'object' && kind !== 'heavy') m = .55; if (e.st === 'kneel') m = 1.6; if (e.phase === 2) m *= 1.1; }
   if (e.kind === 'brute' && e.st === 'down') m = 1.5;
   const direct = src === p, wpn = direct && p.weapon ? p.weapon.kind : null;
   const d = Math.round(dmg * m * (wpn === 'spear' ? 1.4 : 1) * (direct ? RANKS[p.rank - 1].dmg : 1) * (e.elite ? .85 : 1));
@@ -405,7 +458,7 @@ function hitEnemy(e, dmg, kind, src) {
   // la prêtresse perd ses sceaux posés quand on la frappe
   if (e.kind === 'pretresse') for (const o of G.en) if (o.sigilFrom === e) { o.sigil = 0; o.bub && o.bub.destroy(); o.bub = null; }
   if (e.hp <= 0) { kill(e, src); return true; }
-  if (e.boss) { bossCrack(e); if (e.phase === 1 && e.hp <= e.max * .5) phase2(e); updBoss(); return true; }
+  if (e.boss) { bossCrack(e); if (e.phase === 1 && e.hp <= e.max * .5) (e.kind === 'yewa' ? yewaPhase2 : phase2)(e); updBoss(); return true; }
   if (e.st === 'grabbed') { e.flash = .09; return true; } // tenu par un joueur : le partenaire peut frapper sans le libérer
   const big = kind === 'heavy' || kind === 'power' || kind === 'object' || wpn === 'hammer';
   if (big || (e.kind === 'pretresse' && Math.random() < .3)) knock(e, Math.sign(e.x - src.x) || -e.face);
@@ -488,6 +541,7 @@ function startAtk(p, clip) {
 }
 function playerUpdate(p, dt) {
   const I = p.inp, mvx = I.x, mvy = I.y;
+  p.slowT = Math.max(0, (p.slowT || 0) - dt);
   p.inv = Math.max(0, p.inv - dt); p.dashCd = Math.max(0, p.dashCd - dt); p.flash = Math.max(0, p.flash - dt); p.grabCd = Math.max(0, p.grabCd - dt);
   if (p.st === 'out') { I.atk = I.jump = I.dash = I.kick = 0; if (I.pow) { I.pow = 0; rejoin(p); } return; }
   if (p.st === 'grab') { grabUpdate(p, dt); return; }
@@ -528,7 +582,7 @@ function playerUpdate(p, dt) {
       // course : double tape clavier, ou direction horizontale maintenue 0,5 s
       if (mvx && Math.sign(mvx) === p.face) p.runT += dt; else p.runT = 0;
       if (I.runReq && mvx) p.run = true; if (p.runT > .5) p.run = true; if (!mvx) p.run = false;
-      const sp = p.run ? 1.65 : 1;
+      const sp = (p.run ? 1.65 : 1) * (p.slowT > 0 ? .5 : 1);
       p.vx = mvx * 250 * sp; p.vy = mvy * 165; if (mvx) p.face = Math.sign(mvx);
       if (p.st !== 'walk') { p.st = 'walk'; setClip(p, 'walk', 30, true); }
       p.fps = p.run ? 46 : 30; if (p.run && Math.random() < .25) SC.pDust.explode(1, p.x - p.face * 20, p.y);
@@ -597,7 +651,7 @@ function rush(p) {
 }
 
 /* ---------- Prise & projection ---------- */
-const GRABBABLE = { milicien: 1, tireuse: 1, brute: 1 };
+const GRABBABLE = { milicien: 1, tireuse: 1, brute: 1, faucheuse: 1 };
 function tryGrab(p) {
   if (p.grabCd > 0 || p.z > 0 || !p.inp.x) return;
   for (const e of G.en) {
@@ -864,7 +918,7 @@ function enemyUpdate(e, dt) {
   const p = target(e); e.t += dt; e.cd -= dt; e.flash = Math.max(0, e.flash - dt); e.inv = Math.max(0, e.inv - dt);
   if (e.sigil > 0) { e.sigilT2 -= dt; if (e.sigilT2 <= 0) { e.sigil = 0; e.bub && e.bub.destroy(); e.bub = null; } }
   if (e.bub) e.bub.setPosition(e.x, e.y - CHAR[e.kind].h * .5 - e.z).setDepth(e.y + 1);
-  if (e.boss) { bossUpdate(e, dt); physics(e, dt); if (e.st !== 'bossEnter' && G.lock != null) { e.x = clamp(e.x, G.lock + 105, G.lock + VW - 105); const f = floorAt(e.x); e.y = clamp(e.y, f[0] + 10, f[1]); } return; }
+  if (e.boss) { (e.kind === 'yewa' ? yewaUpdate : bossUpdate)(e, dt); physics(e, dt); if (e.st !== 'bossEnter' && G.lock != null) { e.x = clamp(e.x, G.lock + 105, G.lock + VW - 105); const f = floorAt(e.x); e.y = clamp(e.y, f[0] + 10, f[1]); } return; }
   const fl = floorAt(e.x);
   if (e.st === 'dying') { physics(e, dt); if (e.z <= 0 && e.t > .3) { e.st = 'gone'; e.t = 0; if (e.kind !== 'pretresse') setClip(e, 'down', 8, true); } return; }
   if (e.st === 'grabbed') { e.vx = e.vy = 0; return; }
@@ -876,6 +930,7 @@ function enemyUpdate(e, dt) {
     e.vx = 0; if (e.t > (e.kind === 'brute' ? 2.2 : 1)) {
       if (e.kind === 'milicien') { e.st = 'getup'; e.inv = .5; setClip(e, 'getup', 14, false, () => { e.st = 'think'; e.cd = .5; }); }
       else if (e.kind === 'tireuse') { e.st = 'getup'; e.inv = .5; setClip(e, 'rise', 18, false, () => { e.st = 'think'; e.cd = .4; }); }
+      else if (e.kind === 'faucheuse') { e.st = 'getup'; e.inv = .5; setClip(e, 'getup', 18, false, () => { e.st = 'think'; e.cd = .5; }); }
       else if (e.kind === 'brute') { e.st = 'getup'; e.inv = .6; e.shield = e.shieldMax; setClip(e, 'getup', 14, false, () => { e.st = 'think'; e.cd = .8; }); }
       else { e.st = 'think'; e.cd = .3; setClip(e, 'walk', 30, true); }
     }
@@ -890,6 +945,28 @@ function enemyUpdate(e, dt) {
 function clampE(e) { const f = floorAt(e.x); e.y = clamp(e.y, f[0], f[1]); if (G.lock != null && e.st !== 'enter') e.x = clamp(e.x, G.lock + 30, G.lock + VW - 30); }
 function walkAnim(e, moving, fps) { const c = moving ? 'walk' : 'idle'; if (e.clip !== c) setClip(e, c, moving ? fps : 12, true); }
 const AI = {
+  // Faucheuse : garde ses distances, fauche loin et bas (on l'évite en sautant), crache des nuages de spores
+  faucheuse(e, p, dt) {
+    if (e.st === 'sweep') {
+      e.vx = e.vy = 0; const pr = prog(e);
+      if (!e.hitDone && pr > .3 && pr < .7) for (const q of G.players) if (q.active && q.z < 45 && inFront(e, q, 270, 40) && hurtPlayer(q, e.elite ? 16 : 13, e, true)) e.hitDone = true;
+      return;
+    }
+    if (e.st === 'spray') { e.vx = e.vy = 0; return; }
+    face(e, p);
+    const want = canAttack(e) || e.atk, dx = Math.abs(p.x - e.x);
+    const tx = p.x - e.face * (want ? 210 : 330 + (e.slot || 0)), ty = p.y + (want ? 0 : (e.side || 1) * 36);
+    const arrived = moveTo(e, tx, ty, e.spd, dt); walkAnim(e, !arrived, 22);
+    if (!want || e.cd > 0 || Math.abs(p.y - e.y) > 34) return;
+    if (dx < 300 && (dx > 120 || Math.random() < .5)) {
+      e.st = 'sweep'; e.atk = true; e.hitDone = false; e.vx = e.vy = 0; sfx.swing();
+      setClip(e, 'sweep', 24, false, () => { if (e.st === 'sweep') { e.st = 'think'; e.atk = false; e.cd = rnd(1.3, 2) * (e.elite ? .7 : 1); } });
+    } else if (dx < 420) {
+      e.st = 'spray'; e.atk = true; e.vx = e.vy = 0; sfx.charge();
+      setClip(e, 'spray', 20, false, () => { if (e.st === 'spray') { e.st = 'think'; e.atk = false; e.cd = rnd(2.2, 3); } });
+      later(.55, () => { if (e.dead || e.st !== 'spray') return; noise(.6, .12, 900, .5); G.clouds.push({ x: e.x + e.face * 170, y: e.y, r: e.elite ? 140 : 110, life: e.elite ? 5 : 4, tick: .2 }); });
+    }
+  },
   milicien(e, p, dt) {
     if (e.st === 'atk') { e.vx = e.vy = 0; return; }
     if (e.st === 'block') { e.vx = e.vy = 0; if (e.t > .7) { e.st = 'think'; e.cd = .2; } return; }
@@ -984,7 +1061,7 @@ function meleeCheck(e) {
 /* ---------- Boss : Oba Ferrum ---------- */
 function bossUpdate(e, dt) {
   const p = target(e);
-  if (e.st === 'bossEnter') { e.vx = -90; setClip(e, 'idle', 12, true); if (e.x < G.lock + VW - 220) { e.vx = 0; e.st = 'think'; e.cd = 1.4; sfx.roar(); shake(500, .012); if (!SEEN.boss) { SEEN.boss = 1; cutscene(TALK.boss); } } return; }
+  if (e.st === 'bossEnter') { e.vx = -90; setClip(e, 'idle', 12, true); if (e.x < G.lock + VW - 220) { e.vx = 0; e.st = 'think'; e.cd = 1.4; sfx.roar(); shake(500, .012); if (!SEEN.boss) { SEEN.boss = 1; cutscene(TK().boss); } } return; }
   if (e.st === 'dyingBoss') { e.vx = 0; return; }
   if (['smashWind', 'smash', 'recover', 'backhand', 'burst', 'roar', 'chargeWind', 'charge', 'kneel'].includes(e.st)) {
     if (e.st === 'charge') {
@@ -1020,9 +1097,66 @@ function bossUpdate(e, dt) {
     });
   }
 }
+/* ---------- Boss : Yewa-Nul (acte II) ---------- */
+// vole hors de portée, pousse l'arène avec ses rafales, fait jaillir des lianes, pique en rase-mottes puis reste épuisée au sol
+function yewaUpdate(e, dt) {
+  const p = target(e), P2 = e.phase === 2;
+  if (e.st === 'yewaEnter') {
+    e.vx = 0; e.hover = Math.max(70, e.hover - 240 * dt); if (e.clip !== 'idle') setClip(e, 'idle', 14, true);
+    if (e.hover <= 70) { e.st = 'think'; e.cd = 1.4; sfx.roar(); shake(400, .01); gust(-1, 260, .9); if (!SEEN.yewa) { SEEN.yewa = 1; cutscene(TK().boss); } }
+    return;
+  }
+  if (e.st === 'dyingBoss') { e.vx = 0; return; }
+  if (e.st !== 'dive' && e.st !== 'tired') e.hover += ((70 + Math.sin(G.t * 2.2) * 14 + (P2 ? 24 : 0)) - e.hover) * Math.min(1, dt * 4);
+  // en phase 2, le vent souffle en continu, alternant de côté
+  if (P2) { e.windT = (e.windT || 0) - dt; if (e.windT <= 0) { e.windT = 5; e.windDir = -(e.windDir || 1); floatTxt(G.lock + VW / 2, 190, e.windDir > 0 ? 'TEMPÊTE ▶' : '◀ TEMPÊTE', '#e8fff4', true); later(.7, () => !e.dead && gust(e.windDir, 150, 2.6)); } }
+  if (['gust', 'vines', 'burst'].includes(e.st)) { e.vx = e.vy = 0; return; }
+  if (e.st === 'diveWind') {
+    e.vx = e.vy = 0; const g = SC.tele; g.fillStyle(0x8ef7c4, .1 + .1 * Math.sin(e.t * 30)); g.fillRect(G.lock, e.y - 36, VW, 72);
+    if (e.t > .75) { e.st = 'dive'; e.t = 0; e.hitSet = new Set(); sfx.dash(); }
+    return;
+  }
+  if (e.st === 'dive') {
+    e.vx = e.face * (P2 ? 900 : 780); e.hover = Math.max(8, e.hover - 500 * dt); if (Math.random() < .7) SC.pDust.explode(2, e.x - e.face * 60, e.y);
+    for (const q of G.players) if (q.active && !e.hitSet.has(q.slot) && Math.abs(q.x - e.x) < 110 && Math.abs(q.y - e.y) < 44 && q.z < 140 && hurtPlayer(q, 24, e, true)) e.hitSet.add(q.slot);
+    if ((e.face > 0 && e.x > G.lock + VW - 112) || (e.face < 0 && e.x < G.lock + 112)) {
+      e.vx = 0; e.st = 'tired'; e.t = 0; e.hover = 6; sfx.land(); shake(260, .01); SC.pDust.explode(18, e.x, e.y);
+      setClip(e, 'hurt', 8, false); floatTxt(e.x, e.y - 360, 'ÉPUISÉE !', '#ffd36b', true);
+    }
+    return;
+  }
+  if (e.st === 'tired') { e.vx = e.vy = 0; e.hover = 6; if (e.t > (P2 ? 1.6 : 2.2)) { e.st = 'think'; e.cd = .9; setClip(e, P2 ? 'idle2' : 'idle', 14, true); } return; }
+  // déplacement : plane à distance du joueur visé, sur sa ligne
+  face(e, p); const want = P2 ? 'idle2' : 'idle'; if (e.clip !== want) setClip(e, want, 14, true);
+  moveTo(e, p.x - e.face * 300, p.y, e.spd * (P2 ? 1.25 : 1), dt);
+  if (e.cd > 0) return;
+  e.vx = e.vy = 0; const r = Math.random();
+  const back = () => { e.st = 'think'; e.cd = rnd(1.3, 2) / (P2 ? 1.3 : 1); setClip(e, P2 ? 'idle2' : 'idle', 14, true); };
+  if (r < .34) {
+    e.st = 'gust'; sfx.charge(); setClip(e, 'gust', 18, false, back);
+    later(1, () => { if (e.dead || e.st !== 'gust') return; gust(e.face, P2 ? 460 : 380, 1.1); for (const q of G.players) if (q.active && (q.x - e.x) * e.face > 0 && Math.abs(q.x - e.x) < 420 && Math.abs(q.y - e.y) < 90) hurtPlayer(q, 8, e, false); });
+  } else if (r < .68) {
+    e.st = 'vines'; sfx.growl(); setClip(e, 'vines', 18, false, back);
+    later(.8, () => {
+      if (e.dead) return;
+      for (const q of G.players) if (q.active && q.st !== 'out') G.haz.push({ kind: 'vine', x: q.x, y: q.y, r: 85, t: 0, warn: .9 });
+      if (P2) for (let i = 0; i < 2; i++) { const x = G.lock + rnd(120, VW - 120), f = floorAt(x); G.haz.push({ kind: 'vine', x, y: rnd(f[0] + 10, f[1] - 10), r: 85, t: 0, warn: 1.1 }); }
+    });
+  } else {
+    e.st = 'diveWind'; e.t = 0; e.y = clamp(p.y, floorAt(e.x)[0] + 10, floorAt(e.x)[1]); sfx.roar(); setClip(e, 'dive', 13, false);
+  }
+}
+function yewaPhase2(e) {
+  e.phase = 2; e.st = 'burst'; e.inv = 2.2; e.vx = 0; e.windT = 2.5; sfx.roar(); sfx.boom(); shake(800, .016); softFlash(300, 176, 124, 255);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
+  ringFx(e.x, e.y, 0xb07cff, 420, 700, true); SC.pViolet.explode(60, e.x, e.y - 200);
+  setClip(e, 'burst', 14, false, () => { e.st = 'think'; e.cd = 1; setClip(e, 'idle2', 14, true); });
+  later(2.5, () => { if (G.boss === e && !e.dead) { spawn('faucheuse', 1, DIFF[DIFFK].elite >= 1); spawn('faucheuse', -1); tip('throwBoss'); } });
+  updBoss();
+}
 function phase2(e) {
   e.phase = 2; e.st = 'burst'; e.inv = 2.2; e.vx = 0; sfx.roar(); sfx.boom(); shake(800, .018); softFlash(300, 255, 160, 60);
-  $('bPhase').textContent = 'Cœur à nu · Rage'; radio(TALK.phase2);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
   for (let i = 0; i < 3; i++) later(i * .2, () => SC.pFire.explode(30, e.x + rnd(-60, 60), e.y - rnd(100, 300)));
   ringFx(e.x, e.y, 0xffa040, 420, 700, true);
   for (const p of G.players) if (p.active && Math.abs(p.x - e.x) < 260) { p.vx = Math.sign(p.x - e.x) * 500; hurtPlayer(p, 10, e, true); }
@@ -1036,13 +1170,13 @@ function bossCrack(e) {
   if (step < e.crack) {
     e.crack = step; hitstop(.1); shake(220, .01); sfx.shatter(); e.flash = .14;
     SC.pFire.explode(26, e.x + rnd(-40, 40), e.y - rnd(150, 280)); SC.pSpark.explode(20, e.x, e.y - 220);
-    floatTxt(e.x, e.y - 400, 'ARMURE FISSURÉE', '#ffb347'); e.x += e.face * -10;
+    floatTxt(e.x, e.y - 400 - (e.hover || 0), LEVELS[LV].boss.crack, '#ffb347'); e.x += e.face * -10;
   }
 }
 function bossDeath(e) {
   e.st = 'dyingBoss'; G.tsT = .22; sfx.roar(); shake(1400, .02); updBoss(); $('boss').hidden = true;
   for (const o of G.en) if (o !== e && !o.dead) kill(o, e);
-  setClip(e, 'kneel', 6, false);
+  setClip(e, 'kneel', e.kind === 'yewa' ? 12 : 6, false); if (e.kind === 'yewa') { SC.tweens.add({ targets: e, hover: 0, duration: 1600 }); G.wind = 0; }
   for (let i = 0; i < 8; i++) later(i * .16, () => { SC.pFire.explode(26, e.x + rnd(-80, 80), e.y - rnd(60, 320)); sfx.boom(); });
   later(1.5, () => { G.tsT = 1; softFlash(600, 255, 240, 220); glowFx(e.x, e.y - 180, 0xffd36b, 14, 1200); SC.tweens.add({ targets: e.spr, alpha: 0, duration: 1200 }); });
   later(3.2, victory, true);
@@ -1077,7 +1211,7 @@ function shotsUpdate(dt) {
 }
 function telegraphs() {
   const g = SC.tele; g.clear();
-  for (const h of G.haz) { const k = clamp(h.t / h.warn, 0, 1); g.fillStyle(0xff7a2f, .1 + .2 * k + .08 * Math.sin(G.t * 30)); g.fillEllipse(h.x, h.y, h.r * 2 * (.4 + .6 * k), h.r * .7 * (.4 + .6 * k)); g.lineStyle(2, 0xffd36b, .6); g.strokeEllipse(h.x, h.y, h.r * 2, h.r * .7); }
+  for (const h of G.haz) { const k = clamp(h.t / h.warn, 0, 1); g.fillStyle(h.kind === 'vine' ? 0x7dff9a : 0xff7a2f, .1 + .2 * k + .08 * Math.sin(G.t * 30)); g.fillEllipse(h.x, h.y, h.r * 2 * (.4 + .6 * k), h.r * .7 * (.4 + .6 * k)); g.lineStyle(2, 0xffd36b, .6); g.strokeEllipse(h.x, h.y, h.r * 2, h.r * .7); }
   for (const e of G.en) {
     if (e.dead) continue;
     if (e.kind === 'tireuse' && e.st === 'aim') { const a = .35 + .35 * Math.sin(G.t * 40); g.lineStyle(2, 0xd28cff, a); g.beginPath(); g.moveTo(e.x + e.face * 120, e.y - 118); g.lineTo(e.x + e.face * 960, e.y - 118); g.strokePath(); g.fillStyle(0xb07cff, .12); g.fillEllipse(e.x + e.face * 400, e.y, 820, 26); }
@@ -1096,7 +1230,7 @@ function telegraphs() {
 function encounters(dt) {
   if (G.lock == null && G.enc < ENC.length) {
     const E = ENC[G.enc];
-    if (G.cam >= E.L - 2) { G.lock = E.L; G.wave = -1; G.waveT = .4; G.checkpoint = G.enc; $('go').hidden = true; if (E.event) startEvent(E.event); if (E.boss) bossIntro(); else if (TALK['enc' + G.enc] && !G.said['enc' + G.enc]) { G.said['enc' + G.enc] = 1; radio(TALK['enc' + G.enc]); } }
+    if (G.cam >= E.L - 2) { G.lock = E.L; G.wave = -1; G.waveT = .4; G.checkpoint = G.enc; $('go').hidden = true; if (E.event) startEvent(E.event); if (E.boss) bossIntro(); else if (TK()['enc' + G.enc] && !G.said['enc' + G.enc]) { G.said['enc' + G.enc] = 1; radio(TK()['enc' + G.enc]); } }
   }
   if (G.lock != null && !G.ended) {
     const E = ENC[G.enc]; if (E.boss) return;
@@ -1105,7 +1239,7 @@ function encounters(dt) {
       G.waveT -= dt;
       if (G.waveT <= 0) {
         if (G.wave + 1 < E.waves.length) { G.wave++; G.waveT = 1.2; waveList(E.waves[G.wave]).forEach((k, i) => { const el = k.endsWith('*'); const e = spawn(el ? k.slice(0, -1) : k, i % 2 ? -1 : 1, el); e.slot = i * 40; }); }
-        else { G.lock = null; G.event = null; G.haz.forEach(h => h.done = 1); G.camMin = E.L; G.enc++; $('go').hidden = false; G.goT = 2.5; sfx.pick(); }
+        else { G.lock = null; G.event = null; G.gustT = 0; G.clouds = []; G.haz.forEach(h => h.done = 1); G.camMin = E.L; G.enc++; $('go').hidden = false; G.goT = 2.5; sfx.pick(); }
       }
     }
   }
@@ -1133,23 +1267,55 @@ function waveList(w) {
 
 /* ---------- Événement de niveau : pluie de débris sur le pont des Vents ---------- */
 function startEvent(kind) {
+  if (kind === 'gusts') { G.event = { kind, t: 0, next: 2.2 }; tip('gusts'); return; }
   if (kind !== 'debris') return; G.event = { kind, t: 0, next: 1.2 };
   radio([['kofi', 'Le pont se disloque ! Des blocs tombent des tours, suivez les ombres au sol !']]); tip('debris');
 }
+// rafale annoncée par des feuilles qui traversent l'écran, puis poussée sur tout le monde (joueurs et ennemis)
+function gust(dir, power, dur) {
+  G.gustT = dur; G.gustDir = dir; G.gustPow = power; sfx.storm();
+  for (let i = 0; i < 26; i++) later(i * .03, () => SC.pViolet && SC.pDust.explode(1, (dir > 0 ? G.cam : G.cam + VW) , rnd(300, 520)));
+}
+function windTick(dt) {
+  if (!G.gustT || G.gustT <= 0) return; G.gustT -= dt;
+  const push = G.gustDir * G.gustPow * dt;
+  for (const p of G.players) if (p.active && p.st !== 'out' && p.st !== 'held' && p.st !== 'grab') { p.x += push * (p.z > 0 ? 1.4 : 1); p.windFx = .1; }
+  for (const e of G.en) if (!e.dead && !e.boss && !['grabbed', 'thrown', 'holding'].includes(e.st)) e.x += push * .8;
+  if (Math.random() < .6) { const g = SC.fxg; g.lineStyle(2, 0xe8fff4, .35); for (let i = 0; i < 3; i++) { const y = rnd(260, 520), x = G.cam + rnd(0, VW); g.beginPath(); g.moveTo(x, y); g.lineTo(x + G.gustDir * rnd(60, 140), y + rnd(-6, 6)); g.strokePath(); } }
+}
 function eventUpdate(dt) {
   const ev = G.event; if (!ev || G.lock == null) return; ev.t += dt; ev.next -= dt;
-  if (ev.next > 0) return; ev.next = rnd(.9, 1.6) / (NPLAYERS > 1 ? 1.3 : 1);
+  if (ev.next > 0) return;
+  if (ev.kind === 'gusts') { ev.next = rnd(3.2, 4.6); const dir = Math.random() < .5 ? -1 : 1; ev.warn = dir; floatTxt(G.cam + VW / 2, 200, dir > 0 ? 'RAFALE ▶' : '◀ RAFALE', '#e8fff4', true); later(.8, () => { if (G.event === ev) gust(dir, 230, 1.6); }); return; } ev.next = rnd(.9, 1.6) / (NPLAYERS > 1 ? 1.3 : 1);
   // un bloc vise un joueur, un autre tombe au hasard : les ennemis y passent aussi
   const ps = G.players.filter(p => p.active && p.st !== 'out'), p = pick(ps.length ? ps : [G.p]);
   const drop = (x) => { const f = floorAt(x); G.haz.push({ x, y: rnd(f[0] + 10, f[1] - 10), r: 90, t: 0, warn: 1.1 }); };
   drop(clamp(p.x + rnd(-40, 40), G.lock + 60, G.lock + VW - 60)); if (Math.random() < .6) drop(G.lock + rnd(80, VW - 80));
+}
+// nuages de spores des faucheuses : ralentissent et grignotent la vie
+function cloudsUpdate(dt) {
+  const g = SC.tele;
+  for (const c of G.clouds) {
+    c.life -= dt; c.tick -= dt; const a = Math.min(1, c.life) * .28;
+    g.fillStyle(0xb07cff, a); g.fillEllipse(c.x, c.y, c.r * 2, c.r * .8); g.fillStyle(0xd8b4ff, a * .6); g.fillEllipse(c.x + Math.sin(G.t * 3) * 12, c.y - 6, c.r * 1.4, c.r * .5);
+    if (Math.random() < .3) SC.pViolet.explode(1, c.x + rnd(-c.r, c.r) * .8, c.y - rnd(10, 70));
+    for (const p of G.players) if (p.active && p.st !== 'out' && Math.abs(p.x - c.x) < c.r && Math.abs(p.y - c.y) < c.r * .4 && p.z < 40) { p.slowT = Math.max(p.slowT || 0, .4); if (c.tick <= 0) { p.hp = Math.max(1, p.hp - Math.round(3 * DIFF[DIFFK].hurt)); p.flash = .06; updHUD(); } }
+    if (c.tick <= 0) c.tick = .5;
+  }
+  G.clouds = G.clouds.filter(c => c.life > 0);
 }
 function hazardsUpdate(dt) {
   if (!G.haz) return;
   for (const h of G.haz) {
     if (h.done) continue; h.t += dt;
     if (h.t >= h.warn) {
-      h.done = 1; sfx.boom(); shake(200, .01); SC.pFire.explode(18, h.x, h.y - 20); SC.pDust.explode(16, h.x, h.y); ringFx(h.x, h.y, 0xffb347, h.r * 1.4, 300, true);
+      h.done = 1;
+      if (h.kind === 'vine') { // lianes : jaillissent du sol, blessent et entravent
+        sfx.growl(); shake(140, .006); SC.pViolet.explode(20, h.x, h.y - 30); ringFx(h.x, h.y, 0x7dff9a, h.r * 1.3, 320, true); glowFx(h.x, h.y - 60, 0x7dff9a, 3, 380);
+        for (const p of G.players) if (p.active && Math.abs(p.x - h.x) < h.r && Math.abs(p.y - h.y) < h.r * .45 && p.z < 50 && hurtPlayer(p, 12, { x: h.x }, false)) { p.slowT = 1.6; floatTxt(p.x, p.y - 220, 'ENTRAVÉE', '#7dff9a'); }
+        continue;
+      }
+      sfx.boom(); shake(200, .01); SC.pFire.explode(18, h.x, h.y - 20); SC.pDust.explode(16, h.x, h.y); ringFx(h.x, h.y, 0xffb347, h.r * 1.4, 300, true);
       for (const p of G.players) if (p.active && Math.abs(p.x - h.x) < h.r && Math.abs(p.y - h.y) < h.r * .4 && p.z < 60) hurtPlayer(p, 14, { x: h.x }, true);
       for (const e of G.en) if (!e.dead && !e.boss && Math.abs(e.x - h.x) < h.r && Math.abs(e.y - h.y) < h.r * .4) hitEnemy(e, 22, 'object', { x: h.x, face: 1 });
     }
@@ -1174,7 +1340,7 @@ function tick(rdt) {
   separate();
   for (const e of G.en) if (e.remove) { e.spr.destroy(); e.sh.destroy(); }
   G.all = G.all.filter(a => !a.remove); G.en = G.en.filter(e => !e.remove);
-  propsUpdate(dt); eventUpdate(dt); shotsUpdate(dt); telegraphs(); encounters(dt); camera(rdt);
+  propsUpdate(dt); eventUpdate(dt); windTick(dt); shotsUpdate(dt); telegraphs(); cloudsUpdate(dt); encounters(dt); camera(rdt);
   // en coop, chaque joueur reste dans le cadre de la caméra
   if (G.players.filter(p => p.active).length > 1) for (const p of G.players) if (p.active && p.st !== 'out') p.x = clamp(p.x, G.cam + 40, G.cam + VW - 40);
   G.comboT -= dt; if (G.comboT <= 0) G.combo = 0;
@@ -1182,7 +1348,6 @@ function tick(rdt) {
   zoneTint(); tipsTick(); radioTick(rdt); drawAll(); hudTick();
 }
 // teinte d'ambiance par zone : marché chaud, pont froid, réacteur incandescent
-const ZTINT = [[255, 242, 224], [255, 238, 222], [226, 234, 255], [226, 234, 255], [255, 226, 206]];
 function mulTint(t, c) { t = t || 0xffffff; return (Math.round(((t >> 16) & 255) * c[0] / 255) << 16) | (Math.round(((t >> 8) & 255) * c[1] / 255) << 8) | Math.round((t & 255) * c[2] / 255); }
 function zoneTint() {
   const f = (G.cam + VW * .42) / STEP, k = clamp(Math.floor(f), 0, 4), k2 = clamp(k + 1, 0, 4), t = clamp((f - k - .85) / .15, 0, 1);
@@ -1213,6 +1378,9 @@ const TIPS = {
   held: () => 'Un capitaine te tient ! <b>Martèle les boutons</b> pour te libérer. En coop, ton partenaire peut le frapper.',
   weapon: () => 'Arme en main : plus de portée et de dégâts, elle s\'use. <b>Tempête</b> = la lancer. Tu la perds si tu tombes.',
   rank: () => 'Nouvelle <b>étoile</b> : coups plus forts et plus rapides. Tu en perds une à chaque chute.',
+  gusts: () => 'Les rafales poussent tout le monde : <b>avance contre le vent</b> ou profites-en pour pousser les ennemis dans le vide.',
+  faucheuse: () => 'La faucheuse frappe loin et bas : <b>saute</b> par-dessus sa faucille, puis colle-la. Évite ses spores violettes.',
+  yewa: () => 'Yewa-Nul vole : <b>frappe en sautant</b>, ou attends qu\'elle s\'épuise au sol après un piqué. Quitte les cercles verts.',
   debris: () => 'Des blocs tombent : <b>quitte les ombres orange</b>. Les ennemis aussi y passent.',
   kick: () => '<b>' + (touch ? 'Pied' : 'I') + '</b> = coup de pied (renverse) · <b>bas + pied</b> = balayage · Frappe, Frappe, Pied = enchaînement.',
   milicien: () => 'Le milicien <b>pare</b> de face : le 3ᵉ coup du combo, l\'esquive ou une <b>prise</b> brisent sa garde.',
@@ -1221,8 +1389,8 @@ const TIPS = {
   brute: () => 'Bouclier frontal : contourne-la, <b>Tempête</b>, ou combo jusqu\'à le briser. <b>Saute</b> l\'onde au sol.',
   pretresse: () => 'La prêtresse protège ses alliés d\'un sceau : <b>frappe-la</b> pour le dissiper.',
   power: () => '<b>Tempête prête</b> (' + (touch ? 'bouton turquoise' : 'L') + ') : sur place = onde circulaire · <b>avec une direction</b> = Ruée-tempête. Sans énergie, elle coûte de la vie.',
-  boss: () => 'Oba Ferrum est blindé : <b>Tempête, tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
-  throwBoss: () => 'Renforts ! <b>Projette</b> un milicien sur le colosse.',
+  boss: () => LV === 1 ? TIPS.yewa() : 'Oba Ferrum est blindé : <b>Tempête, tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
+  throwBoss: () => LV === 1 ? 'Renforts ! <b>Projette</b> une faucheuse : Yewa est touchée de plein fouet si elle plane bas.' : 'Renforts ! <b>Projette</b> un milicien sur le colosse.',
 };
 let tipQ = [], tipT = 0;
 function tip(k) { if (tipSeen[k] || !TIPS[k] || G.demo) return; tipSeen[k] = 1; try { localStorage.setItem('orun-tips', JSON.stringify(tipSeen)); } catch (e) {} tipQ.push(TIPS[k]()); }
@@ -1267,19 +1435,20 @@ function renderStory() {
   const list = storyMode === 'intro' ? STORY : [END];
   const [ey, tx] = list[storyI]; $('stEy').textContent = ey; $('stTx').textContent = tx;
   $('stDots').innerHTML = list.map((_, i) => `<i class="${i === storyI ? 'on' : ''}"></i>`).join('');
-  $('bNext').textContent = storyMode === 'end' ? 'Retour au menu' : storyI < list.length - 1 ? 'Continuer' : 'Combattre';
+  const more = LV < LEVELS.length - 1;
+  $('bNext').textContent = storyMode === 'end' ? (more ? 'Acte suivant ▶' : 'Retour au menu') : storyI < list.length - 1 ? 'Continuer' : 'Combattre';
   $('bSkip').hidden = storyMode === 'end';
 }
-$('bNext').addEventListener('click', () => { const list = storyMode === 'intro' ? STORY : [END]; if (storyI < list.length - 1) { storyI++; renderStory(); } else if (storyMode === 'intro') begin(); else toMenu(); });
+$('bNext').addEventListener('click', () => { const list = storyMode === 'intro' ? STORY : [END]; if (storyI < list.length - 1) { storyI++; renderStory(); } else if (storyMode === 'intro') begin(); else if (LV < LEVELS.length - 1) nextLevel(); else toMenu(); });
 $('bSkip').addEventListener('click', begin);
 function begin() {
-  audio(); playTrack('stage1'); $('story').hidden = true; newGame(false); state = 'play'; paused = false; radioQ = []; radioT = 0; $('radio').classList.remove('on');
-  later(1, () => radio(TALK.start), true);
+  audio(); playTrack(LEVELS[LV].track); $('story').hidden = true; newGame(false); applyCarry(); state = 'play'; paused = false; radioQ = []; radioT = 0; $('radio').classList.remove('on');
+  later(1, () => radio(TK().start), true);
   $('hud').hidden = false; $('bPause').hidden = false; document.body.classList.add('playing'); sfx.gong();
 }
 function bossIntro() {
   $('tip').hidden = true; tipT = 0; tipQ = [];
-  $('bossIntro').hidden = false; playTrack('boss1'); sfx.gong(); G.tsT = .3;
+  $('bossIntro').hidden = false; playTrack(LEVELS[LV].bossTrack); sfx.gong(); G.tsT = .3;
   const go = () => { if (!BOSS_READY) { later(.3, go, true); return; } G.tsT = 1; $('bossIntro').hidden = true; spawnBoss(); tip('boss'); };
   later(2.4, go, true);
 }
@@ -1293,7 +1462,7 @@ function showOver() {
 function victory() {
   for (const p of G.players) if (p.active && p.st !== 'out' && p.st !== 'dead') { p.st = 'win'; p.vx = p.vy = 0; setClip(p, 'win', 12, false); }
   G.ended = true; playTrack('clear'); $('boss').hidden = true; $('bossIntro').hidden = true; $('tip').hidden = true; tipT = 0; tipQ = [];
-  cutscene(TALK.win, () => {
+  cutscene(TK().win, () => {
   state = 'end'; document.body.classList.remove('playing'); saveBest(); later(4, () => playTrack('title'), true);
   $('hud').hidden = true; $('boss').hidden = true; $('bPause').hidden = true; showStory('end');
   $('stEy').textContent = END[0] + ' · Score ' + String(Math.floor(G.score)).padStart(6, '0');
@@ -1303,6 +1472,7 @@ function victory() {
 function clearCombo() { $('combo').style.opacity = 0; $('buff').hidden = true; }
 function saveBest() { clearCombo(); const s = Math.floor(G.score); if (s > best) { best = s; try { localStorage.setItem('orun-best', String(best)); } catch (e) {} } }
 function toMenu() {
+  if (LV !== 0) { location.reload(); return; } // le menu vit dans le décor de l'acte I
   try { SC.scene.resume(); } catch (e) {} $('tip').hidden = true; tipQ = []; tipT = 0;
   for (const id of ['story', 'over', 'pause', 'bossIntro']) $(id).hidden = true; $('hud').hidden = true; $('boss').hidden = true; $('bPause').hidden = true; $('go').hidden = true;
   document.body.classList.remove('playing'); clearCombo(); paused = false; state = 'title'; playTrack('title'); $('talk').hidden = true; $('radio').classList.remove('on'); radioQ = []; newGame(true); $('title').hidden = false;
@@ -1311,10 +1481,26 @@ function toMenu() {
 function retry() {
   // reprise au dernier point de contrôle
   const cp = G.checkpoint, sc = Math.floor(G.score * .5), cont = G.cont - 1, ranks = G.players.map(p => Math.max(1, p.rank - 1));
-  $('over').hidden = true; newGame(false); G.score = sc; G.cont = cont; G.players.forEach((p, i) => p.rank = ranks[i]); MUSMAN.cur = null; playTrack('stage1'); state = 'play'; document.body.classList.add('playing');
+  $('over').hidden = true; newGame(false); G.score = sc; G.cont = cont; G.players.forEach((p, i) => p.rank = ranks[i]); MUSMAN.cur = null; playTrack(LEVELS[LV].track); state = 'play'; document.body.classList.add('playing');
   if (cp > 0) { G.enc = cp; G.camMin = ENC[cp].L - 20; G.cam = ENC[cp].L - 300; for (const q of G.players) { q.x = ENC[cp].L + 120 - q.slot * 60; q.y = clamp(q.y, floorAt(q.x)[0], floorAt(q.x)[1]); } for (const pr of G.props) if (pr.x < ENC[cp].L) { pr.dead = true; pr.spr.destroy(); } }
   if (ENC[cp] && ENC[cp].boss) { G.cam = ENC[cp].L; }
   $('hud').hidden = false; $('bPause').hidden = false; $('boss').hidden = true;
+}
+// passage à l'acte suivant : on garde score, vies, étoiles et crédits, puis on recharge la scène avec le nouveau décor
+function nextLevel() {
+  CARRY = { score: G.score, cont: G.cont, np: NPLAYERS, players: G.players.map(p => ({ active: p.active, out: p.st === 'out', lives: p.lives, rank: p.rank, score: p.score, nextLife: p.nextLife, rankPts: p.rankPts || 0, en: p.en })) };
+  $('story').hidden = true; $('loading').hidden = false; $('loading').innerHTML = '<div>' + LEVELS[LV + 1].name + '<span><i id="lbar"></i></span></div>';
+  state = 'loading'; G = null; setLevel(LV + 1); SC.scene.restart();
+}
+function applyCarry() {
+  if (!CARRY) return; const c = CARRY; CARRY = null;
+  G.score = c.score; G.cont = c.cont; NPLAYERS = c.np;
+  c.players.forEach((q, i) => {
+    const p = G.players[i]; if (q.active && !p.active) joinPlayer(p, true);
+    Object.assign(p, { lives: Math.max(1, q.lives), rank: q.rank, score: q.score, nextLife: q.nextLife, rankPts: q.rankPts, en: Math.max(q.en, 40) });
+    if (q.out && G.cont > 0) { /* revient pour l'acte suivant */ }
+  });
+  updHUD();
 }
 function startGame() { NPLAYERS = $('m2p').classList.contains('on') ? 2 : 1; startIntro(begin); }
 $('bStart').addEventListener('click', () => { audio(); startGame(); });
@@ -1441,8 +1627,8 @@ async function playTrack(id) {
   } catch (e) { setProc(id); }
 }
 function setProc(mode) {
-  if (!AC) return; startMusic(); mus.mode = mode; mus.boss = mode === 'boss1';
-  const on = mode === 'stage1' || mode === 'boss1' || mode === 'title', t = AC.currentTime;
+  if (!AC) return; startMusic(); mus.mode = mode; mus.boss = /^boss/.test(mode || '');
+  const on = /^(stage|boss)/.test(mode || '') || mode === 'title', t = AC.currentTime;
   mus.g.gain.cancelScheduledValues(t); mus.g.gain.setValueAtTime(mus.g.gain.value, t); mus.g.gain.linearRampToValueAtTime(on ? (mode === 'title' ? .34 : .42) : 0, t + (on ? 1.2 : .4));
   if (introBus && mode !== 'intro') { const b = introBus; b.gain.setValueAtTime(b.gain.value, t); b.gain.linearRampToValueAtTime(0, t + .5); setTimeout(() => b.disconnect(), 700); introBus = null; }
   if (mode === 'intro') introScore();
@@ -1600,7 +1786,7 @@ $('cskip').addEventListener('click', e => { e.stopPropagation(); endIntro(); });
 addEventListener('resize', () => { if (CN.on) fitCine(); });
 
 /* ---------- Dialogues : radio (sans pause) et scènes (avec pause) ---------- */
-const WHO = { amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'] };
+const WHO = { amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'], yewa: ['Yewa-Nul', 'face_yewa.webp', '#8ef7c4'] };
 const TALK = {
   start: [['zuri', 'Amara, je te reçois. La milice a bouclé le Marché Haut. Ouvre-toi un chemin jusqu\'au réacteur.'], ['amara', 'Ils ont choisi le mauvais jour.']],
   enc1: [['zuri', 'Des tireuses dans les ruelles. Quand la ligne violette s\'allume, frappe le tir : il repartira à l\'envoyeur.'], ['zuri', 'Et méfie-toi des brutes à bouclier. De face, elles sont des murs.']],
@@ -1610,6 +1796,16 @@ const TALK = {
   phase2: [['ferrum', 'ILS M\'ARRACHENT LE CŒUR !'], ['zuri', 'Son armure cède ! Garde tes distances quand il charge, Amara !']],
   win: [['ferrum', 'Libre… Merci, fille d\'Ọya. Les Jardins-Turbines… ils y retiennent Yewa.'], ['nyx', 'Belle démonstration, Amara. Tu as toujours eu le geste juste… et le mauvais camp.'], ['amara', '…Nyx ?'], ['zuri', 'Cette voix… Amara, c\'était ta maîtresse d\'armes ?']],
 };
+const TALK2 = {
+  start: [['kofi', 'Amara, ici Kofi. Les serres sont pleines de faucheuses. Elles moissonnent la sève de Yewa pour Sombre-Lune.'], ['amara', 'Alors on va leur couper l\'herbe sous le pied.']],
+  enc1: [['kofi', 'Les faucheuses frappent loin avec leur faucille, mais elles sont lentes à se relever. Passe sous leur garde.'], ['kofi', 'Et ne reste pas dans leurs nuages de spores : ça colle aux bottes.']],
+  enc2: [['kofi', 'La galerie des turbines ! Le vent s\'est emballé, les rafales vont te pousser. Accroche-toi !'], ['amara', 'Je sens Yewa… elle souffre.']],
+  enc3: [['zuri', 'Amara, Zuri sur la fréquence. Le Nul se concentre au sommet. Yewa ne pourra pas se retenir longtemps.'], ['amara', 'J\'arrive.']],
+  boss: [['yewa', 'Gardienne… le vent ne m\'écoute plus… il n\'y a que du vide en moi.'], ['amara', 'Je vais te rendre ton souffle, Yewa.'], ['yewa', 'Alors attrape-moi… si le vent te le permet.']],
+  phase2: [['yewa', 'LE NUL ME DÉVORE !'], ['kofi', 'Elle déchaîne la tempête ! Frappe-la quand elle redescend, Amara !']],
+  win: [['yewa', 'Mon souffle… il revient. Merci, fille d\'Ọya.'], ['yewa', 'Écoute-moi : Ọ̀run-Zéro est presque chargée. Ils ont vidé trop d\'esprits.'], ['nyx', 'Tu ne fais que retarder l\'inévitable, Amara. Rejoins-moi à la Flèche.'], ['kofi', 'Nyx… Elle t\'attend. Alors on y va ensemble, cette fois.']]
+};
+const TALKS = [TALK, TALK2];
 let radioQ = [], radioT = 0, talkCb = null, talkQ = [], talkTyping = 0;
 function radio(lines) { radioQ.push(...lines); }
 function radioTick(dt) {
@@ -1642,5 +1838,5 @@ window.GAME = new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' }, fps: { target: 60 },
   scene: [Play]
 });
-window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join() { NPLAYERS = 2; joinPlayer(G.players[1]); }, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); } };
+window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join() { NPLAYERS = 2; joinPlayer(G.players[1]); }, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
 })();
