@@ -1,4 +1,4 @@
-# Les Héritiers d'Orun — Actes I et II
+# Les Héritiers d'Orun — Actes I à VI
 
 Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu : https://heritiers-orun.vercel.app
 
@@ -25,6 +25,10 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 ## Actes
 - **Acte I · Les Quartiers suspendus** : décor à la racine, boss Oba Ferrum.
 - **Acte II · Les Jardins-Turbines** : dossier `l2/` (décor, `atlas_l2*` Faucheuse + Yewa-Nul), rafales de vent, spores, lianes. Sources dans `pipeline/src/l2` et `pipeline/frames/l2`, specs `spec_l2*.json`.
+- **Acte III · Les Docks des Nuages** : `l3/`, harponneurs + Commandante Ìjì, bombardements.
+- **Acte IV · Les Bassins d'Ọ̀ṣun** : `l4/`, plongeurs + Ọ̀ṣun-Nul, crue (le sol monte et ralentit).
+- **Acte V · Les Archives d'Ifá** : `l5/`, spectres + Ẹ̀ṣù-Miroir (reflets), salles plongées dans le noir.
+- **Acte VI · La Flèche d'Ọ̀run** : `l6/`, Lames-Lune + Nyx Adébayo (contre, gravité), ascenseur orbital. Fin du jeu.
 - Score, vies, étoiles et crédits passent d'un acte à l'autre. Les données de chaque acte sont dans `LEVELS` (game.js).
 
 ## Structure

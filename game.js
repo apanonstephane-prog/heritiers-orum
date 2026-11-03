@@ -111,14 +111,15 @@ function startMusic() {
 /* ---------- Données de jeu ---------- */
 const CHAR = {
   amara: { h: 200 }, milicien: { h: 204 }, tireuse: { h: 200 }, chien: { h: 112 }, brute: { h: 246 }, pretresse: { h: 214 }, ferrum: { h: 360 },
-  faucheuse: { h: 212 }, yewa: { h: 300 }
+  faucheuse: { h: 212 }, yewa: { h: 300 },
+  harponneur: { h: 214 }, ijji: { h: 236 }, plongeur: { h: 196 }, oshun: { h: 300 }, spectre: { h: 206 }, eshu: { h: 246 }, lamelune: { h: 206 }, nyx: { h: 232 }
 };
 // zones du décor (coordonnées logiques)
 const TILE = 1260, OV = 140, STEP = TILE - OV;
 const WORLD_W = TILE * 5 - OV * 4;
 function floorAt(x) {
   const k = clamp(Math.floor(x / STEP), 0, 4), f = (x - k * STEP);
-  const a = ZFLOOR[k];
+  const a = (k === 4 && G && G.flood) ? [ZFLOOR[4][0] + G.flood, ZFLOOR[4][1]] : ZFLOOR[k];
   if (k < 4 && f > STEP - 40) { const b = ZFLOOR[k + 1], t = clamp((f - (STEP - 40)) / (OV + 40), 0, 1); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
   return a;
 }
@@ -161,8 +162,85 @@ const LEVELS = [
       ['Le Nul', 'Sombre-Lune a vidé Yewa et l\'a remplie de Nul, un vide qui dévore la sève. Les jardins se dessèchent, les turbines s\'emballent, et les faucheuses de la milice récoltent ce qui reste.'],
       ['Kofi Mensah', 'Kofi, forgeron-boxeur et frère d\'armes d\'Amara, tient la radio depuis les docks des serres. « Monte jusqu\'au sanctuaire du vent, petite sœur. Je garde tes arrières. »']
     ],
-    end: ['Acte II terminé', 'Libérée, Yewa reprend son souffle et les jardins reverdissent. Mais avant de s\'apaiser, elle murmure : « Ọ̀run-Zéro est presque chargée… La Flèche… » La suite de l\'aventure se prépare : l\'Acte III arrive bientôt.']
+    end: ['Acte II terminé', 'Libérée, Yewa reprend son souffle et les jardins reverdissent. Mais avant de s\'apaiser, elle murmure : « Ọ̀run-Zéro est presque chargée… La Flèche… » Kofi a trouvé un moyen de monter : les Docks des Nuages.']
+  },
+  {
+    dir: 'l3/', name: 'Acte III · Les Docks des Nuages', track: 'stage3', bossTrack: 'boss3', atlas: 'l3',
+    zfloor: [[395, 530], [395, 530], [362, 530], [362, 530], [372, 525]],
+    ztint: [[255, 236, 214], [255, 236, 214], [232, 228, 255], [232, 228, 255], [220, 226, 255]],
+    enc: [
+      { L: 140, waves: [['harponneur', 'milicien'], ['harponneur', 'chien', 'tireuse']], props: [[620, 0.5, 'crate'], [860, .85, 'barrel']] },
+      { L: 1180, waves: [['harponneur', 'harponneur'], ['brute', 'harponneur*']], props: [[1500, .3, 'crate'], [1880, .7, 'cell'], [1650, .9, 'kiosk']] },
+      { L: 2480, event: 'bombard', waves: [['chien', 'harponneur', 'tireuse'], ['pretresse', 'harponneur*', 'milicien']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, event: 'bombard', waves: [['brute*', 'harponneur', 'tireuse*'], ['harponneur*', 'milicien*', 'brute', 'chien*']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .4, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'ijji', name: 'Commandante Ìjì', sub: 'Capitaine du Croissant', face: 'face_ijji.webp', ey: 'Maîtresse des Docks des Nuages', desc: 'Elle livre les esprits capturés à la Flèche, cale après cale.', line: '« Une Gardienne sur mon pont ? Jetez-la par-dessus bord. »', phase2: 'Bombardement', crack: 'COQUE PERCÉE', tip: 'Ìjì harponne de loin : <b>change de ligne</b> quand la chaîne violette s\'allume. En phase 2, quitte les ombres du bombardement.' },
+    intro: [
+      ['Acte III · Les Docks des Nuages', 'Les esprits libérés ont un mot en commun : la Flèche. Pour l\'atteindre, il faut un dirigeable, et tous partent des Docks des Nuages.'],
+      ['Commandante Ìjì', 'La capitaine Ìjì y charge les esprits capturés dans les cales du croissant violet. Ses harponneurs tiennent les quais.'],
+      ['Kofi Mensah', '« Je prépare un vieux cargo au bout des quais, petite sœur. Ouvre-moi la route, et on s\'envole. »']
+    ],
+    end: ['Acte III terminé', 'Le vaisseau amiral s\'échoue sur les quais et ses cales s\'ouvrent : des dizaines d\'esprits s\'envolent. Dans les registres de bord d\'Ìjì, une destination revient sans cesse : les Bassins d\'Ọ̀ṣun, qui abreuvent toute la cité.']
+  },
+  {
+    dir: 'l4/', name: 'Acte IV · Les Bassins d\'Ọ̀ṣun', track: 'stage4', bossTrack: 'boss4', atlas: 'l4',
+    zfloor: [[400, 528], [400, 528], [402, 482], [402, 482], [382, 528]],
+    ztint: [[240, 252, 255], [240, 252, 255], [214, 240, 244], [214, 240, 244], [228, 236, 255]],
+    enc: [
+      { L: 140, waves: [['plongeur', 'milicien'], ['plongeur', 'chien', 'tireuse']], props: [[620, 0.5, 'crate'], [860, .85, 'barrel']] },
+      { L: 1180, event: 'flood', waves: [['tireuse', 'plongeur'], ['brute', 'plongeur*']], props: [[1500, .3, 'crate'], [1880, .7, 'cell'], [1650, .9, 'kiosk']] },
+      { L: 2480, waves: [['milicien', 'plongeur', 'tireuse'], ['pretresse', 'plongeur*', 'chien']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, event: 'flood', waves: [['brute*', 'plongeur', 'pretresse*'], ['plongeur*', 'milicien*', 'plongeur*', 'chien*']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .4, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'oshun', name: 'Ọ̀ṣun-Nul', sub: 'Esprit des eaux', face: 'face_oshun.webp', ey: 'Gardienne des Bassins', desc: 'L\'esprit des rivières, empoisonné de Nul : l\'eau de toute la cité devient amère.', line: '« Mon eau était douce… pourquoi a-t-elle ce goût de vide ? »', phase2: 'La crue', crack: 'LE NUL SE DISSOUT', tip: 'Ọ̀ṣun fouette loin : reste hors de la bande turquoise. <b>Saute</b> ses vagues. En phase 2, la crue réduit l\'arène.' },
+    intro: [
+      ['Acte IV · Les Bassins d\'Ọ̀ṣun', 'Sous la cité dorment les bassins sacrés d\'Ọ̀ṣun. Chaque goutte bue à Nova-Kemet en vient.'],
+      ['Le poison', 'Sombre-Lune y déverse du Nul pour affaiblir l\'esprit des eaux sans qu\'on le remarque. Déjà, les fontaines du Marché Haut deviennent violettes.'],
+      ['Amara Diallo', '« Ọ̀ṣun, tiens bon. J\'arrive avec les vannes ouvertes et la colère au poing. »']
+    ],
+    end: ['Acte IV terminé', 'L\'eau redevient claire et chante de nouveau dans les canaux. Ọ̀ṣun confie à Amara une perle de rivière : « Zuri t\'attend aux Archives d\'Ifá. Elle y a trouvé le chemin de la Flèche… mais quelqu\'un s\'amuse avec les reflets. »']
+  },
+  {
+    dir: 'l5/', name: 'Acte V · Les Archives d\'Ifá', track: 'stage5', bossTrack: 'boss5', atlas: 'l5',
+    zfloor: [[362, 528], [362, 528], [362, 528], [362, 528], [382, 528]],
+    ztint: [[255, 240, 222], [255, 240, 222], [226, 222, 255], [226, 222, 255], [244, 228, 255]],
+    enc: [
+      { L: 140, waves: [['spectre', 'milicien'], ['spectre', 'tireuse', 'chien']], props: [[620, 0.5, 'crate'], [860, .85, 'barrel']] },
+      { L: 1180, waves: [['milicien', 'spectre'], ['brute', 'spectre*']], props: [[1500, .3, 'crate'], [1880, .7, 'cell'], [1650, .9, 'kiosk']] },
+      { L: 2480, event: 'dark', waves: [['spectre', 'chien', 'spectre'], ['pretresse', 'spectre*', 'milicien']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, event: 'dark', waves: [['brute*', 'spectre', 'tireuse*'], ['spectre*', 'milicien*', 'brute', 'spectre']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .4, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'eshu', name: 'Ẹ̀ṣù-Miroir', sub: 'Esprit des carrefours', face: 'face_eshu.webp', ey: 'Gardien des carrefours', desc: 'L\'esprit des chemins et des messages, enfermé par Sombre-Lune dans un labyrinthe de miroirs.', line: '« Tous les chemins mènent ici, Gardienne. Lequel est le bon ? »', phase2: 'Mille reflets', crack: 'UN MIROIR SE BRISE', tip: 'Ẹ̀ṣù t\'attire avec son bâton et tire un rayon de miroir : <b>change de ligne</b>. En phase 2, ses reflets tombent en un coup.' },
+    intro: [
+      ['Acte V · Les Archives d\'Ifá', 'Les Archives d\'Ifá gardent la mémoire de la cité : chaque masque, chaque tablette raconte un chemin.'],
+      ['Zuri Okafor', 'Zuri, technomancienne et oracle des masques, y cherche le passage secret vers la Flèche. « Les masques me parlent, Amara… et ils ont peur. »'],
+      ['Les reflets', 'Sombre-Lune a enfermé Ẹ̀ṣù, l\'esprit des carrefours, dans une salle de miroirs. Tant qu\'il est captif, tous les chemins mentent.']
+    ],
+    end: ['Acte V terminé', 'Ẹ̀ṣù s\'incline et tous les miroirs montrent enfin la même route : une passerelle qui monte vers la Flèche d\'Ọ̀run. « Ton ancienne maîtresse t\'y attend, Gardienne. Elle croit encore sauver la cité. »']
+  },
+  {
+    dir: 'l6/', name: 'Acte VI · La Flèche d\'Ọ̀run', track: 'stage6', bossTrack: 'boss6', atlas: 'l6',
+    zfloor: [[386, 528], [386, 528], [396, 528], [396, 528], [392, 528]],
+    ztint: [[228, 224, 255], [228, 224, 255], [236, 230, 255], [236, 230, 255], [240, 226, 255]],
+    enc: [
+      { L: 140, waves: [['lamelune', 'milicien'], ['lamelune', 'tireuse', 'milicien']], props: [[620, 0.5, 'crate'], [860, .85, 'barrel']] },
+      { L: 1180, waves: [['lamelune*', 'lamelune'], ['brute*', 'lamelune*']], props: [[1500, .3, 'crate'], [1880, .7, 'cell'], [1650, .9, 'kiosk']] },
+      { L: 2480, event: 'elevator', waves: [['milicien*', 'lamelune', 'lamelune*'], ['pretresse', 'lamelune*', 'tireuse*']], props: [[2900, .5, 'barrel'], [3200, .5, 'crate']] },
+      { L: 3560, event: 'elevator', waves: [['lamelune*', 'lamelune*', 'tireuse*'], ['lamelune*', 'lamelune', 'brute*', 'chien*']], props: [[3900, .3, 'cell'], [4150, .75, 'crate'], [4300, .4, 'barrel']] },
+      { L: WORLD_W - VW, boss: true, props: [[WORLD_W - 820, .4, 'barrel'], [WORLD_W - 180, .8, 'barrel'], [WORLD_W - 500, .9, 'crate']] }
+    ],
+    boss: { kind: 'nyx', name: 'Nyx Adébayo', sub: 'Directrice de Sombre-Lune', face: 'face_nyx.webp', ey: 'Ancienne Gardienne', desc: 'La maîtresse d\'armes d\'Amara. Elle croit la cité perdue et veut sauver « ce qui peut l\'être ».', line: '« Tu as toujours eu le geste juste, Amara. Montre-moi s\'il suffit. »', phase2: 'Gravité inversée', crack: 'SA GARDE FAIBLIT', tip: 'Nyx <b>contre</b> si tu frappes sans arrêt : varie, recule quand elle se met en garde. Fuis le cercle violet de gravité.' },
+    intro: [
+      ['Acte VI · La Flèche d\'Ọ̀run', 'La tour orbitale de Sombre-Lune perce les nuages. À son sommet, Ọ̀run-Zéro aspire les derniers esprits de la cité.'],
+      ['Nyx Adébayo', 'Nyx fut la plus grande des Gardiennes, et la maîtresse d\'armes d\'Amara. Elle a vu les quartiers tomber et a choisi de sauver ce qui pouvait l\'être, quel qu\'en soit le prix.'],
+      ['Les héritiers', 'Kofi tient la base de la tour, Zuri brouille les défenses. Amara monte seule vers le sommet.']
+    ],
+    end: ['Fin', 'Amara ne détruit pas Ọ̀run-Zéro : elle coupe les chaînes de tous les esprits à la fois. La cité ne tombe pas, elle descend lentement, portée par des esprits enfin libres. Nyx, à genoux, regarde Nova-Kemet se poser sur les nuages. « Tu avais raison, Amara. On ne possède pas un esprit… on le porte. »']
   }
+
 ];
 let LV = 0, ZFLOOR, ENC, ZTINT, STORY, END, CARRY = null;
 function setLevel(i) { LV = i; const L = LEVELS[i]; ZFLOOR = L.zfloor; ENC = L.enc; ZTINT = L.ztint; STORY = L.intro; END = L.end; }
@@ -359,7 +437,11 @@ const ENEMY = {
   pretresse: { hp: 58, spd: 0, pts: 350 },
   ferrum: { hp: 660, spd: 55, pts: 10000 },
   faucheuse: { hp: 84, spd: 105, pts: 260 },
-  yewa: { hp: 720, spd: 150, pts: 12000 }
+  yewa: { hp: 720, spd: 150, pts: 12000 },
+  harponneur: { hp: 90, spd: 95, pts: 280 }, ijji: { hp: 760, spd: 85, pts: 14000 },
+  plongeur: { hp: 70, spd: 130, pts: 300 }, oshun: { hp: 800, spd: 120, pts: 16000 },
+  spectre: { hp: 66, spd: 140, pts: 320 }, eshu: { hp: 820, spd: 120, pts: 18000 },
+  lamelune: { hp: 100, spd: 150, pts: 400 }, nyx: { hp: 1000, spd: 170, pts: 30000 }
 };
 // variantes élites : même dessin recoloré, comportement plus dangereux
 const ELITE = {
@@ -368,7 +450,9 @@ const ELITE = {
   tireuse: { name: 'TIREUSE D\'ÉLITE', tint: [255, 230, 140] }, // rafale de 3 tirs
   brute: { name: 'COLOSSE', tint: [255, 160, 120] },      // bouclier renforcé, onde plus large
   pretresse: { name: 'GRANDE PRÊTRESSE', tint: [255, 170, 255] },
-  faucheuse: { name: 'MOISSONNEUSE', tint: [255, 150, 120] } // fauche plus vite, spores plus larges
+  faucheuse: { name: 'MOISSONNEUSE', tint: [255, 150, 120] }, // fauche plus vite, spores plus larges
+  harponneur: { name: 'BOSCO', tint: [255, 190, 130] }, plongeur: { name: 'PLONGEUR D\'ABYSSE', tint: [150, 210, 255] },
+  spectre: { name: 'SPECTRE ANCIEN', tint: [255, 170, 230] }, lamelune: { name: 'LAME-ÉCLIPSE', tint: [255, 140, 140] }
 };
 function spawn(kind, side, elite) {
   const cam = G.lock ? G.lock : G.cam, fl = floorAt(cam + VW / 2);
@@ -437,6 +521,11 @@ function hitEnemy(e, dmg, kind, src) {
   if (e.st === 'holding' && e.held) { const h = e.held; freeHeld(h, e); }
   // bouclier de la prêtresse
   if (e.sigil > 0) { e.sigil -= dmg; sfx.block(); SC.pViolet.explode(10, e.x, e.y - 120); floatTxt(e.x, e.y - 200, 'SCEAU', '#b07cff'); if (e.sigil <= 0) { e.bub && e.bub.destroy(); e.bub = null; } hitstop(.04); return true; }
+  // Nyx en garde-contre : le coup est renvoyé à l'attaquant
+  if (e.kind === 'nyx' && e.counterReady && p && src === p) { e.counterReady = false; sfx.block(); hitstop(.1); SC.pViolet.explode(24, e.x, e.y - 120); floatTxt(e.x, e.y - 260, 'CONTRE !', '#c9a0ff', true); hurtPlayer(p, 18, e, true); return true; }
+  if (e.kind === 'nyx') { e.hitCount = (e.hitCount || 0) + 1; e.hitWin = 1.6; }
+  // garde de la lame-lune : bloque tout ce qui n'est pas un coup lourd de dos
+  if (e.kind === 'lamelune' && e.guard && fromFront && kind !== 'power' && kind !== 'object') { sfx.block(); SC.pViolet.explode(10, e.x + e.face * 30, e.y - 120); floatTxt(e.x, e.y - 210, 'PARÉ', '#c9a0ff'); hitstop(.04); return true; }
   // garde du milicien
   if (e.kind === 'milicien' && e.st === 'block' && fromFront && kind !== 'heavy' && kind !== 'power') { sfx.block(); SC.pSpark.explode(10, e.x + e.face * 30, e.y - 120); floatTxt(e.x, e.y - 210, 'BLOQUÉ', '#ffd36b'); e.x -= e.face * 10; hitstop(.03); return true; }
   // bouclier de la brute
@@ -458,7 +547,7 @@ function hitEnemy(e, dmg, kind, src) {
   // la prêtresse perd ses sceaux posés quand on la frappe
   if (e.kind === 'pretresse') for (const o of G.en) if (o.sigilFrom === e) { o.sigil = 0; o.bub && o.bub.destroy(); o.bub = null; }
   if (e.hp <= 0) { kill(e, src); return true; }
-  if (e.boss) { bossCrack(e); if (e.phase === 1 && e.hp <= e.max * .5) (e.kind === 'yewa' ? yewaPhase2 : phase2)(e); updBoss(); return true; }
+  if (e.boss) { bossCrack(e); if (e.phase === 1 && e.hp <= e.max * .5) BOSSAI[e.kind].phase2(e); updBoss(); return true; }
   if (e.st === 'grabbed') { e.flash = .09; return true; } // tenu par un joueur : le partenaire peut frapper sans le libérer
   const big = kind === 'heavy' || kind === 'power' || kind === 'object' || wpn === 'hammer';
   if (big || (e.kind === 'pretresse' && Math.random() < .3)) knock(e, Math.sign(e.x - src.x) || -e.face);
@@ -651,7 +740,7 @@ function rush(p) {
 }
 
 /* ---------- Prise & projection ---------- */
-const GRABBABLE = { milicien: 1, tireuse: 1, brute: 1, faucheuse: 1 };
+const GRABBABLE = { milicien: 1, tireuse: 1, brute: 1, faucheuse: 1, harponneur: 1, plongeur: 1, lamelune: 1 };
 function tryGrab(p) {
   if (p.grabCd > 0 || p.z > 0 || !p.inp.x) return;
   for (const e of G.en) {
@@ -918,7 +1007,7 @@ function enemyUpdate(e, dt) {
   const p = target(e); e.t += dt; e.cd -= dt; e.flash = Math.max(0, e.flash - dt); e.inv = Math.max(0, e.inv - dt);
   if (e.sigil > 0) { e.sigilT2 -= dt; if (e.sigilT2 <= 0) { e.sigil = 0; e.bub && e.bub.destroy(); e.bub = null; } }
   if (e.bub) e.bub.setPosition(e.x, e.y - CHAR[e.kind].h * .5 - e.z).setDepth(e.y + 1);
-  if (e.boss) { (e.kind === 'yewa' ? yewaUpdate : bossUpdate)(e, dt); physics(e, dt); if (e.st !== 'bossEnter' && G.lock != null) { e.x = clamp(e.x, G.lock + 105, G.lock + VW - 105); const f = floorAt(e.x); e.y = clamp(e.y, f[0] + 10, f[1]); } return; }
+  if (e.boss) { BOSSAI[e.kind].update(e, dt); physics(e, dt); if (e.st !== 'bossEnter' && G.lock != null) { e.x = clamp(e.x, G.lock + 105, G.lock + VW - 105); const f = floorAt(e.x); e.y = clamp(e.y, f[0] + 10, f[1]); } return; }
   const fl = floorAt(e.x);
   if (e.st === 'dying') { physics(e, dt); if (e.z <= 0 && e.t > .3) { e.st = 'gone'; e.t = 0; if (e.kind !== 'pretresse') setClip(e, 'down', 8, true); } return; }
   if (e.st === 'grabbed') { e.vx = e.vy = 0; return; }
@@ -930,7 +1019,7 @@ function enemyUpdate(e, dt) {
     e.vx = 0; if (e.t > (e.kind === 'brute' ? 2.2 : 1)) {
       if (e.kind === 'milicien') { e.st = 'getup'; e.inv = .5; setClip(e, 'getup', 14, false, () => { e.st = 'think'; e.cd = .5; }); }
       else if (e.kind === 'tireuse') { e.st = 'getup'; e.inv = .5; setClip(e, 'rise', 18, false, () => { e.st = 'think'; e.cd = .4; }); }
-      else if (e.kind === 'faucheuse') { e.st = 'getup'; e.inv = .5; setClip(e, 'getup', 18, false, () => { e.st = 'think'; e.cd = .5; }); }
+      else if (['faucheuse', 'harponneur', 'plongeur', 'spectre', 'lamelune'].includes(e.kind)) { e.st = 'getup'; e.inv = .5; setClip(e, 'getup', 18, false, () => { e.st = 'think'; e.cd = .5; }); }
       else if (e.kind === 'brute') { e.st = 'getup'; e.inv = .6; e.shield = e.shieldMax; setClip(e, 'getup', 14, false, () => { e.st = 'think'; e.cd = .8; }); }
       else { e.st = 'think'; e.cd = .3; setClip(e, 'walk', 30, true); }
     }
@@ -945,6 +1034,65 @@ function enemyUpdate(e, dt) {
 function clampE(e) { const f = floorAt(e.x); e.y = clamp(e.y, f[0], f[1]); if (G.lock != null && e.st !== 'enter') e.x = clamp(e.x, G.lock + 30, G.lock + VW - 30); }
 function walkAnim(e, moving, fps) { const c = moving ? 'walk' : 'idle'; if (e.clip !== c) setClip(e, c, moving ? fps : 12, true); }
 const AI = {
+  eshu(e, p, dt) { eshuUpdate(e, dt); }, // reflets d'Ẹ̀ṣù : même comportement, un coup suffit
+  // Harponneur : reste à distance, harponne le joueur et le ramène vers lui, puis l'assomme
+  harponneur(e, p, dt) {
+    if (e.st === 'harpoon') {
+      e.vx = e.vy = 0; const pr = prog(e);
+      if (pr < .35) { const g = SC.tele; g.lineStyle(2, 0xffb37a, .4 + .3 * Math.sin(G.t * 40)); g.beginPath(); g.moveTo(e.x + e.face * 90, e.y - 120); g.lineTo(e.x + e.face * 560, e.y - 120); g.strokePath(); }
+      if (!e.hitDone && pr > .35 && pr < .55) for (const q of G.players) if (q.active && q.z < 80 && (q.x - e.x) * e.face > 40 && Math.abs(q.x - e.x) < 560 && Math.abs(q.y - e.y) < 30 && hurtPlayer(q, 8, e, false)) {
+        e.hitDone = true; const tx = e.x + e.face * 95; SC.tweens.add({ targets: q, x: tx, duration: 260, ease: 'Quad.easeIn' }); floatTxt(q.x, q.y - 220, 'HARPONNÉE !', '#ffb37a');
+        later(.45, () => { if (!e.dead && e.st === 'harpoon') { e.st = 'bash'; e.hitDone = false; setClip(e, 'bash', 22, false, () => { if (e.st === 'bash') { e.st = 'think'; e.atk = false; e.cd = rnd(1.4, 2); } }); } });
+      }
+      return;
+    }
+    if (e.st === 'bash') { e.vx = e.vy = 0; const pr = prog(e); if (!e.hitDone && pr > .35 && pr < .7) for (const q of G.players) if (q.active && inFront(e, q, 150, 36) && hurtPlayer(q, 14, e, true)) e.hitDone = true; return; }
+    face(e, p); const want = canAttack(e) || e.atk, dx = Math.abs(p.x - e.x);
+    const arrived = moveTo(e, p.x - e.face * (want ? (dx < 160 ? 120 : 360) : 420), p.y + (want ? 0 : (e.side || 1) * 40), e.spd, dt); walkAnim(e, !arrived, 22);
+    if (!want || e.cd > 0 || Math.abs(p.y - e.y) > 30) return;
+    e.atk = true; e.vx = e.vy = 0; e.hitDone = false;
+    if (dx < 160) { e.st = 'bash'; sfx.swing(); setClip(e, 'bash', 20, false, () => { if (e.st === 'bash') { e.st = 'think'; e.atk = false; e.cd = rnd(1.2, 1.8); } }); }
+    else { e.st = 'harpoon'; sfx.charge(); setClip(e, 'harpoon', 16, false, () => { if (e.st === 'harpoon') { e.st = 'think'; e.atk = false; e.cd = rnd(1.6, 2.4); } }); }
+  },
+  // Plongeur : plonge sous l'eau (invisible, intouchable) et ressurgit derrière sa cible
+  plongeur(e, p, dt) {
+    if (e.st === 'thrust') { e.vx = e.vy = 0; const pr = prog(e); if (!e.hitDone && pr > .3 && pr < .7) for (const q of G.players) if (q.active && inFront(e, q, 175, 36) && hurtPlayer(q, 11, e, false)) e.hitDone = true; return; }
+    if (e.st === 'dive') {
+      e.vx = e.vy = 0; const pr = prog(e);
+      if (pr > .3 && !e.moved) { e.moved = true; e.inv = .8; const L = G.lock != null ? G.lock : G.cam; const nx = clamp(p.x - p.face * 90, L + 60, L + VW - 60); e.x = nx; e.y = p.y; face(e, p); SC.pDust.explode(10, e.x, e.y); }
+      if (pr > .7 && !e.hitDone) for (const q of G.players) if (q.active && Math.abs(q.x - e.x) < 120 && Math.abs(q.y - e.y) < 40 && hurtPlayer(q, 13, e, true)) e.hitDone = true;
+      e.spr.setAlpha(pr > .3 && pr < .62 ? 0 : 1);
+      return;
+    }
+    face(e, p); const want = canAttack(e) || e.atk, dx = Math.abs(p.x - e.x);
+    const arrived = moveTo(e, p.x - e.face * (want ? 130 : 300), p.y + (want ? 0 : (e.side || 1) * 50), e.spd, dt); walkAnim(e, !arrived, 24);
+    if (!want || e.cd > 0) return; e.atk = true; e.vx = e.vy = 0; e.hitDone = false;
+    if (dx < 190 && Math.abs(p.y - e.y) < 30 && Math.random() < .55) { e.st = 'thrust'; sfx.swing(); setClip(e, 'thrust', 22, false, () => { if (e.st === 'thrust') { e.st = 'think'; e.atk = false; e.cd = rnd(1, 1.6); } }); }
+    else { e.st = 'dive'; e.moved = false; noise(.5, .15, 700, .6); setClip(e, 'dive', 16, false, () => { e.spr.setAlpha(1); if (e.st === 'dive') { e.st = 'think'; e.atk = false; e.cd = rnd(1.8, 2.6); } }); }
+  },
+  // Spectre-masque : double taille fulgurante, se dissipe et réapparaît ; se dédouble une fois blessé
+  spectre(e, p, dt) {
+    if (e.st === 'slash') { e.vx = e.vy = 0; const pr = prog(e); if (!e.hitDone && pr > .3 && pr < .75) for (const q of G.players) if (q.active && inFront(e, q, 160, 36) && hurtPlayer(q, e.clone ? 6 : 10, e, false)) e.hitDone = true; return; }
+    if (e.st === 'blink') { e.vx = e.vy = 0; const pr = prog(e); if (pr > .45 && !e.moved) { e.moved = true; const L = G.lock != null ? G.lock : G.cam; e.x = clamp(p.x + (Math.random() < .5 ? -1 : 1) * 150, L + 60, L + VW - 60); e.y = p.y; face(e, p); SC.pBolt.explode(12, e.x, e.y - 100); } return; }
+    if (!e.clone && !e.split && e.hp < e.max * .55) { e.split = true; const c = spawn('spectre', 1); c.x = e.x - e.face * 80; c.y = e.y; c.st = 'think'; c.clone = true; c.hp = c.max = 22; c.ghost = true; floatTxt(e.x, e.y - 230, 'DÉDOUBLEMENT', '#c9a0ff'); SC.pBolt.explode(20, e.x, e.y - 100); }
+    face(e, p); const want = canAttack(e) || e.atk, dx = Math.abs(p.x - e.x);
+    const arrived = moveTo(e, p.x - e.face * (want ? 120 : 280), p.y + (want ? 0 : (e.side || 1) * 40), e.spd, dt); walkAnim(e, !arrived, 20);
+    if (!want || e.cd > 0) return; e.atk = true; e.vx = e.vy = 0; e.hitDone = false;
+    if (dx < 170 && Math.abs(p.y - e.y) < 30) { e.st = 'slash'; sfx.zap(); setClip(e, 'slash', 24, false, () => { if (e.st === 'slash') { e.st = 'think'; e.atk = false; e.cd = rnd(.9, 1.5); } }); }
+    else { e.st = 'blink'; e.moved = false; sfx.zap(); setClip(e, 'blink', 22, false, () => { if (e.st === 'blink') { e.st = 'think'; e.atk = false; e.cd = .25; } }); }
+  },
+  // Lame-lune : pare les coups de face et riposte aussitôt
+  lamelune(e, p, dt) {
+    if (e.st === 'parry') { e.vx = e.vy = 0; const pr = prog(e); if (pr > .55 && !e.hitDone) for (const q of G.players) if (q.active && inFront(e, q, 170, 36) && hurtPlayer(q, 13, e, true)) e.hitDone = true; return; }
+    if (e.st === 'slash') { e.vx = e.vy = 0; const pr = prog(e); if (e.lunge && pr < .4) e.vx = e.face * 380; if (!e.hitDone && pr > .3 && pr < .7) for (const q of G.players) if (q.active && inFront(e, q, 170, 36) && hurtPlayer(q, 12, e, false)) e.hitDone = true; return; }
+    face(e, p);
+    // garde haute face aux attaques
+    if (['atk1', 'atk2', 'kick', 'atk3'].includes(p.st) && Math.abs(p.x - e.x) < 200 && Math.abs(p.y - e.y) < 40 && Math.random() < dt * 3 && e.cd < .8) { e.st = 'parry'; e.hitDone = false; e.guard = true; setClip(e, 'parry', 18, false, () => { e.guard = false; if (e.st === 'parry') { e.st = 'think'; e.cd = .9; } }); return; }
+    const want = canAttack(e) || e.atk, dx = Math.abs(p.x - e.x);
+    const arrived = moveTo(e, p.x - e.face * (want ? 140 : 300), p.y + (want ? 0 : (e.side || 1) * 40), e.spd, dt); walkAnim(e, !arrived, 24);
+    if (!want || e.cd > 0 || Math.abs(p.y - e.y) > 30 || dx > 280) return;
+    e.atk = true; e.st = 'slash'; e.lunge = dx > 150; e.hitDone = false; sfx.swing(); setClip(e, 'slash', 22, false, () => { if (e.st === 'slash') { e.st = 'think'; e.atk = false; e.cd = rnd(1, 1.6); } });
+  },
   // Faucheuse : garde ses distances, fauche loin et bas (on l'évite en sautant), crache des nuages de spores
   faucheuse(e, p, dt) {
     if (e.st === 'sweep') {
@@ -1154,6 +1302,120 @@ function yewaPhase2(e) {
   later(2.5, () => { if (G.boss === e && !e.dead) { spawn('faucheuse', 1, DIFF[DIFFK].elite >= 1); spawn('faucheuse', -1); tip('throwBoss'); } });
   updBoss();
 }
+/* ---------- Boss des actes III à VI ---------- */
+function bossEnterStep(e) { // entrée commune : le boss avance depuis la droite puis le dialogue démarre
+  e.vx = -110; if (e.clip !== 'walk') setClip(e, 'walk', 18, true);
+  if (e.x < G.lock + VW - 230) { e.vx = 0; e.st = 'think'; e.cd = 1.2; setClip(e, 'idle', 14, true); sfx.roar(); shake(300, .008); if (!SEEN['b' + LV]) { SEEN['b' + LV] = 1; cutscene(TK().boss); } }
+}
+function bossBack(e, cd) { return () => { if (e.dead || e.st === 'dyingBoss') return; e.st = 'think'; e.cd = cd / (e.phase === 2 ? 1.35 : 1); setClip(e, e.phase === 2 && SC.META[e.kind].clips.idle2 ? 'idle2' : 'idle', 14, true); }; }
+function bossApproach(e, p, dist, dt) { face(e, p); const ok = moveTo(e, p.x - e.face * dist, p.y, e.spd * (e.phase === 2 ? 1.3 : 1), dt); const c = ok ? 'idle' : 'walk'; if (e.clip !== c && SC.META[e.kind].clips[c]) setClip(e, c, ok ? 14 : 18, true); return ok; }
+function laneHit(e, reach, dmg, heavy) { let h = false; for (const q of G.players) if (q.active && (q.x - e.x) * e.face > -20 && Math.abs(q.x - e.x) < reach && Math.abs(q.y - e.y) < 40 && q.z < 90 && hurtPlayer(q, dmg, e, heavy)) h = true; return h; }
+
+// Commandante Ìjì : harpon-chaîne qui ramène, rafales de canon, puis bombardement de son dirigeable
+function ijjiUpdate(e, dt) {
+  const p = target(e);
+  if (e.st === 'bossEnter') { bossEnterStep(e); return; }
+  if (e.st === 'dyingBoss') { e.vx = 0; return; }
+  if (e.phase === 2) { e.bombT = (e.bombT || 2) - dt; if (e.bombT <= 0) { e.bombT = rnd(1.3, 2); const q = pick(G.players.filter(x => x.active && x.st !== 'out')) || G.p; const f = floorAt(q.x); G.haz.push({ x: clamp(q.x + rnd(-60, 60), G.lock + 60, G.lock + VW - 60), y: clamp(q.y + rnd(-20, 20), f[0], f[1]), r: 95, t: 0, warn: 1.2 }); } }
+  if (['chain', 'cannon', 'flare', 'hurtB'].includes(e.st)) { e.vx = e.vy = 0; if (e.st === 'chain' && prog(e) < .4) { const g = SC.tele; g.lineStyle(3, 0xc9a0ff, .5 + .3 * Math.sin(G.t * 40)); g.beginPath(); g.moveTo(e.x + e.face * 80, e.y - 130); g.lineTo(e.x + e.face * 700, e.y - 130); g.strokePath(); } return; }
+  bossApproach(e, p, 320, dt); if (e.cd > 0) return; e.vx = e.vy = 0;
+  if (Math.random() < .5) {
+    e.st = 'chain'; sfx.charge(); setClip(e, 'chain', 16, false, bossBack(e, 1.5));
+    later(.85, () => { if (e.dead || e.st !== 'chain') return; sfx.heavy(); for (const q of G.players) if (q.active && q.z < 80 && (q.x - e.x) * e.face > 0 && Math.abs(q.x - e.x) < 700 && Math.abs(q.y - e.y) < 34 && hurtPlayer(q, 10, e, false)) { SC.tweens.add({ targets: q, x: e.x + e.face * 120, duration: 300, ease: 'Quad.easeIn' }); floatTxt(q.x, q.y - 220, 'RAMENÉE !', '#c9a0ff'); } });
+  } else {
+    e.st = 'cannon'; setClip(e, 'cannon', 16, false, bossBack(e, 1.4));
+    for (let k = 0; k < 3; k++) later(.5 + k * .28, () => { if (e.dead || e.st !== 'cannon') return; sfx.laser(); G.shots.push({ x: e.x + e.face * 110, y: e.y + (k - 1) * 26, z: 120, vx: e.face * 820, from: e, dmg: 12, life: 1.6, col: 0xffb347 }); });
+  }
+}
+function ijjiPhase2(e) {
+  e.phase = 2; e.st = 'flare'; e.inv = 2; e.bombT = 2.5; sfx.roar(); shake(500, .012); softFlash(250, 200, 140, 255);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
+  setClip(e, 'flare', 14, false, bossBack(e, 1)); later(2.5, () => { if (G.boss === e && !e.dead) { spawn('harponneur', 1, true); spawn('harponneur', -1); } }); updBoss();
+}
+
+// Ọ̀ṣun-Nul : fouet d'eau à longue portée, vague au ras du sol (à sauter), crue qui rétrécit l'arène
+function oshunUpdate(e, dt) {
+  const p = target(e);
+  if (e.st === 'bossEnter') { bossEnterStep(e); return; }
+  if (e.st === 'dyingBoss') { e.vx = 0; return; }
+  if (['whip', 'wave', 'burst'].includes(e.st)) { e.vx = e.vy = 0; if (e.st === 'whip') { const pr = prog(e); if (pr < .4) { const g = SC.tele; g.fillStyle(0x2fe0d0, .1 + .08 * Math.sin(G.t * 30)); g.fillRect(Math.min(e.x, e.x + e.face * 360), e.y - 30, 360, 60); } if (!e.hitDone && pr > .4 && pr < .7) e.hitDone = laneHit(e, 360, 15, true); } return; }
+  bossApproach(e, p, 260, dt); if (e.cd > 0) return; e.vx = e.vy = 0; e.hitDone = false;
+  if (Math.abs(p.x - e.x) < 380 && Math.random() < .55) { e.st = 'whip'; sfx.swing(); setClip(e, 'whip', 16, false, bossBack(e, 1.3)); }
+  else {
+    e.st = 'wave'; sfx.growl(); setClip(e, 'wave', 16, false, bossBack(e, 1.6));
+    later(.8, () => { if (e.dead) return; noise(.8, .2, 500, .5); G.rings.push({ x: e.x + e.face * 60, y: e.y, r: 30, max: 760, spd: 520, dmg: 14, col: 0x2fe0d0, hitS: new Set() }); if (e.phase === 2) later(.5, () => !e.dead && G.rings.push({ x: e.x + e.face * 60, y: e.y, r: 30, max: 760, spd: 600, dmg: 14, col: 0x2fe0d0, hitS: new Set() })); });
+  }
+}
+function oshunPhase2(e) {
+  e.phase = 2; e.st = 'burst'; e.inv = 2.2; sfx.roar(); sfx.boom(); shake(700, .014); softFlash(300, 47, 224, 208);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
+  G.floodTo = 46; floatTxt(G.lock + VW / 2, 200, 'LA CRUE MONTE !', '#8ef7ff', true);
+  setClip(e, 'burst', 14, false, bossBack(e, 1)); later(2.5, () => { if (G.boss === e && !e.dead) { spawn('plongeur', 1, true); spawn('plongeur', -1); } }); updBoss();
+}
+
+// Ẹ̀ṣù-Miroir : crochet de bâton qui attire, rayon du miroir, puis reflets trompeurs (un seul est le vrai)
+function eshuUpdate(e, dt) {
+  const p = target(e);
+  if (e.st === 'bossEnter') { bossEnterStep(e); return; }
+  if (e.st === 'dyingBoss') { e.vx = 0; return; }
+  if (['hook', 'beamWind', 'beam', 'burst'].includes(e.st)) {
+    e.vx = e.vy = 0;
+    if (e.st === 'hook') { const pr = prog(e); if (!e.hitDone && pr > .35 && pr < .65) for (const q of G.players) if (q.active && inFront(e, q, 230, 40) && hurtPlayer(q, 12, e, false)) { e.hitDone = true; SC.tweens.add({ targets: q, x: e.x + e.face * 90, duration: 220 }); } }
+    if (e.st === 'beamWind') { const g = SC.tele; g.fillStyle(0xffffff, .12 + .1 * Math.sin(G.t * 30)); g.fillRect(Math.min(e.x, e.x + e.face * 760), e.y - 30, 760, 60); }
+    if (e.st === 'beam') { const g = SC.fxg; g.lineStyle(22, 0xfff4d6, .55); g.beginPath(); g.moveTo(e.x + e.face * 60, e.y - 150); g.lineTo(e.x + e.face * 820, e.y - 150); g.strokePath(); e.beamTick = (e.beamTick || 0) - dt; if (e.beamTick <= 0) { e.beamTick = .25; laneHit(e, 820, 5, false); } }
+    return;
+  }
+  bossApproach(e, p, e.mirror ? 330 : 280, dt); if (e.cd > 0) return; e.vx = e.vy = 0; e.hitDone = false;
+  if (Math.abs(p.x - e.x) < 260 && Math.random() < .5) { e.st = 'hook'; sfx.swing(); setClip(e, 'hook', 16, false, bossBack(e, 1.4)); }
+  else { e.st = 'beamWind'; sfx.charge(); setClip(e, 'beam', 14, false, bossBack(e, 2)); later(.6, () => { if (!e.dead && e.st === 'beamWind') { e.st = 'beam'; sfx.laser(); } }); }
+}
+function eshuPhase2(e) {
+  e.phase = 2; e.st = 'burst'; e.inv = 2.2; sfx.roar(); shake(600, .012); softFlash(300, 255, 120, 120);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
+  setClip(e, 'burst', 14, false, bossBack(e, 1));
+  later(1.6, () => { if (G.boss !== e || e.dead) return; for (let k = 0; k < 2; k++) { const m = actor('eshu', e.x + (k ? 260 : -260), e.y, e.face); m.hp = m.max = 1; m.st = 'think'; m.cd = 1 + k; m.mirror = true; m.boss = false; m.spd = e.spd; m.decoy = true; setClip(m, 'idle', 14, true); G.en.push(m); G.all.push(m); SC.pBolt.explode(20, m.x, m.y - 120); } floatTxt(G.lock + VW / 2, 200, 'QUI EST LE VRAI ?', '#ffd36b', true); });
+  updBoss();
+}
+
+// Nyx Adébayo : combo rapide, champ de gravité qui attire puis écrase, garde-contre qui punit l'acharnement, clones d'ombre en phase 2
+function nyxUpdate(e, dt) {
+  const p = target(e);
+  if (e.st === 'bossEnter') { bossEnterStep(e); return; }
+  if (e.st === 'dyingBoss') { e.vx = 0; return; }
+  // compte les coups encaissés d'affilée : au-delà de 4, elle passe en garde-contre
+  e.hitWin = Math.max(0, (e.hitWin || 0) - dt); if (e.hitWin <= 0) e.hitCount = 0;
+  if (['combo', 'gravity', 'counter', 'burst'].includes(e.st)) {
+    e.vx = e.vy = 0;
+    if (e.st === 'combo') { const pr = prog(e); if (pr < .5) e.vx = e.face * 260; const k = Math.floor(pr * 3); if (k !== e.cHit && pr > .15 && pr < .9) { e.cHit = k; laneHit(e, 190, 9, k === 2); } }
+    if (e.st === 'gravity') { const pr = prog(e); if (pr < .6) for (const q of G.players) if (q.active && q.st !== 'out' && q.z <= 0) { q.x += Math.sign(e.x - q.x) * 160 * dt; } }
+    return;
+  }
+  if (e.hitCount >= 4 && !e.counterCd) { e.st = 'counter'; e.counterReady = true; e.counterCd = true; later(3, () => e.counterCd = false); floatTxt(e.x, e.y - 280, 'GARDE', '#c9a0ff'); setClip(e, 'counter', 14, false, () => { e.counterReady = false; bossBack(e, .8)(); }); return; }
+  bossApproach(e, p, 200, dt); if (e.cd > 0) return; e.vx = e.vy = 0;
+  const r = Math.random();
+  if (r < .5) { e.st = 'combo'; e.cHit = -1; sfx.swing(); setClip(e, 'combo', 18, false, bossBack(e, 1.1)); }
+  else {
+    e.st = 'gravity'; sfx.charge(); setClip(e, 'gravity', 14, false, bossBack(e, 1.6));
+    later(1.1, () => { if (e.dead) return; sfx.boom(); shake(320, .012); ringFx(e.x, e.y, 0xb07cff, 280, 450, true); for (const q of G.players) if (q.active && Math.abs(q.x - e.x) < 240 && Math.abs(q.y - e.y) < 90 && q.z < 40) hurtPlayer(q, 16, e, true); });
+  }
+}
+function nyxPhase2(e) {
+  e.phase = 2; e.st = 'burst'; e.inv = 2.4; sfx.roar(); sfx.boom(); shake(900, .016); softFlash(320, 176, 124, 255);
+  $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
+  setClip(e, 'burst', 14, false, bossBack(e, 1));
+  later(2.2, () => { if (G.boss !== e || e.dead) return; for (let k = 0; k < 2; k++) { const c = spawn('lamelune', k ? 1 : -1, true); c.shade = true; } floatTxt(G.lock + VW / 2, 200, 'OMBRES DE NYX', '#c9a0ff', true); });
+  // gravité inversée : soulève régulièrement les héritiers
+  e.liftT = 4;
+  updBoss();
+}
+const BOSSAI = {
+  ferrum: { update: (e, dt) => bossUpdate(e, dt), phase2: e => phase2(e) },
+  yewa: { update: (e, dt) => yewaUpdate(e, dt), phase2: e => yewaPhase2(e) },
+  ijji: { update: ijjiUpdate, phase2: ijjiPhase2 },
+  oshun: { update: oshunUpdate, phase2: oshunPhase2 },
+  eshu: { update: eshuUpdate, phase2: eshuPhase2 },
+  nyx: { update: (e, dt) => { nyxUpdate(e, dt); if (e.phase === 2 && e.st !== 'dyingBoss') { e.liftT -= dt; if (e.liftT <= 0) { e.liftT = 6; floatTxt(G.lock + VW / 2, 200, 'GRAVITÉ INVERSÉE', '#c9a0ff', true); for (const q of G.players) if (q.active && q.st !== 'out' && q.z <= 0 && !['grab', 'held', 'dead'].includes(q.st)) { q.st = 'air'; q.vz = 900; q.z = 1; q.airAtk = false; setClip(q, 'jumpUp', 10, false); } } } }, phase2: nyxPhase2 }
+};
 function phase2(e) {
   e.phase = 2; e.st = 'burst'; e.inv = 2.2; e.vx = 0; sfx.roar(); sfx.boom(); shake(800, .018); softFlash(300, 255, 160, 60);
   $('bPhase').textContent = LEVELS[LV].boss.phase2; radio(TK().phase2);
@@ -1209,9 +1471,18 @@ function shotsUpdate(dt) {
   G.rings = G.rings.filter(r => r.r < r.max);
   pshotsUpdate(dt); hazardsUpdate(dt);
 }
+function darkness() {
+  if (!SC.dark) SC.dark = SC.add.rectangle(0, 0, VW, VH, 0x05030c, 0).setOrigin(0).setScrollFactor(0).setDepth(8950);
+  const on = G.event && G.event.kind === 'dark' && G.event.dark; const target = on ? .72 : 0;
+  SC.dark.alpha += (target - SC.dark.alpha) * .08;
+  if (SC.dark.alpha > .05) for (const p of G.players) if (p.active && p.st !== 'out') { const gx = SC.fxg; gx.fillStyle(0xfff0c8, .07); gx.fillCircle(p.x, p.y - 100, 170); }
+  // la crue de l'arène monte jusqu'à son niveau
+  if (G.floodTo) G.flood = (G.flood || 0) + Math.sign(G.floodTo - (G.flood || 0)) * Math.min(Math.abs(G.floodTo - (G.flood || 0)), 20 * (1 / 60));
+  if (G.flood > 1) { const L = G.lock != null ? G.lock : G.cam, top = ZFLOOR[4][0]; SC.tele.fillStyle(0x2fe0d0, .22 + .05 * Math.sin(G.t * 3)); SC.tele.fillRect(L - 20, top - 6, VW + 40, G.flood + 6); for (const p of G.players) if (p.active) p.y = Math.max(p.y, top + G.flood); }
+}
 function telegraphs() {
-  const g = SC.tele; g.clear();
-  for (const h of G.haz) { const k = clamp(h.t / h.warn, 0, 1); g.fillStyle(h.kind === 'vine' ? 0x7dff9a : 0xff7a2f, .1 + .2 * k + .08 * Math.sin(G.t * 30)); g.fillEllipse(h.x, h.y, h.r * 2 * (.4 + .6 * k), h.r * .7 * (.4 + .6 * k)); g.lineStyle(2, 0xffd36b, .6); g.strokeEllipse(h.x, h.y, h.r * 2, h.r * .7); }
+  const g = SC.tele; g.clear(); darkness();
+  for (const h of G.haz) { const k = clamp(h.t / h.warn, 0, 1); g.fillStyle(h.kind === 'vine' ? 0x7dff9a : h.laser ? 0xb07cff : 0xff7a2f, .1 + .2 * k + .08 * Math.sin(G.t * 30)); g.fillEllipse(h.x, h.y, h.r * 2 * (.4 + .6 * k), h.r * .7 * (.4 + .6 * k)); g.lineStyle(2, 0xffd36b, .6); g.strokeEllipse(h.x, h.y, h.r * 2, h.r * .7); }
   for (const e of G.en) {
     if (e.dead) continue;
     if (e.kind === 'tireuse' && e.st === 'aim') { const a = .35 + .35 * Math.sin(G.t * 40); g.lineStyle(2, 0xd28cff, a); g.beginPath(); g.moveTo(e.x + e.face * 120, e.y - 118); g.lineTo(e.x + e.face * 960, e.y - 118); g.strokePath(); g.fillStyle(0xb07cff, .12); g.fillEllipse(e.x + e.face * 400, e.y, 820, 26); }
@@ -1268,6 +1539,10 @@ function waveList(w) {
 /* ---------- Événement de niveau : pluie de débris sur le pont des Vents ---------- */
 function startEvent(kind) {
   if (kind === 'gusts') { G.event = { kind, t: 0, next: 2.2 }; tip('gusts'); return; }
+  if (kind === 'bombard') { G.event = { kind: 'debris', t: 0, next: 1.4 }; radio([['kofi', 'Un dirigeable de Sombre-Lune nous pilonne ! Surveille les ombres sur le pont !']]); tip('debris'); return; }
+  if (kind === 'flood') { G.event = { kind, t: 0, next: 1.8 }; tip('flood'); return; }
+  if (kind === 'dark') { G.event = { kind, t: 0, next: 3, dark: false }; tip('dark'); return; }
+  if (kind === 'elevator') { G.event = { kind: 'debris', t: 0, next: 1.6, laser: true }; radio([['zuri', 'L\'ascenseur monte, et leurs drones tirent depuis les parois. Bouge sans arrêt !']]); return; }
   if (kind !== 'debris') return; G.event = { kind, t: 0, next: 1.2 };
   radio([['kofi', 'Le pont se disloque ! Des blocs tombent des tours, suivez les ombres au sol !']]); tip('debris');
 }
@@ -1286,10 +1561,12 @@ function windTick(dt) {
 function eventUpdate(dt) {
   const ev = G.event; if (!ev || G.lock == null) return; ev.t += dt; ev.next -= dt;
   if (ev.next > 0) return;
+  if (ev.kind === 'flood') { ev.next = rnd(2.6, 3.6); const dir = Math.random() < .5 ? 1 : -1, x = dir > 0 ? G.lock + 20 : G.lock + VW - 20; const f = floorAt(x + dir * 200); floatTxt(G.lock + VW / 2, 200, 'VANNE OUVERTE : SAUTE !', '#8ef7ff', true); later(.7, () => { if (G.event === ev) { noise(.8, .18, 500, .5); G.rings.push({ x, y: (f[0] + f[1]) / 2, r: 20, max: 1100, spd: 560, dmg: 10, col: 0x2fe0d0, hitS: new Set() }); } }); return; }
+  if (ev.kind === 'dark') { ev.dark = !ev.dark; ev.next = ev.dark ? 3.2 : 5; if (ev.dark) { floatTxt(G.lock + VW / 2, 200, 'LES LUMIÈRES S\'ÉTEIGNENT', '#c9a0ff', true); sfx.zap(); } return; }
   if (ev.kind === 'gusts') { ev.next = rnd(3.2, 4.6); const dir = Math.random() < .5 ? -1 : 1; ev.warn = dir; floatTxt(G.cam + VW / 2, 200, dir > 0 ? 'RAFALE ▶' : '◀ RAFALE', '#e8fff4', true); later(.8, () => { if (G.event === ev) gust(dir, 230, 1.6); }); return; } ev.next = rnd(.9, 1.6) / (NPLAYERS > 1 ? 1.3 : 1);
   // un bloc vise un joueur, un autre tombe au hasard : les ennemis y passent aussi
   const ps = G.players.filter(p => p.active && p.st !== 'out'), p = pick(ps.length ? ps : [G.p]);
-  const drop = (x) => { const f = floorAt(x); G.haz.push({ x, y: rnd(f[0] + 10, f[1] - 10), r: 90, t: 0, warn: 1.1 }); };
+  const drop = (x) => { const f = floorAt(x); G.haz.push({ x, y: rnd(f[0] + 10, f[1] - 10), r: 90, t: 0, warn: 1.1, laser: ev.laser }); };
   drop(clamp(p.x + rnd(-40, 40), G.lock + 60, G.lock + VW - 60)); if (Math.random() < .6) drop(G.lock + rnd(80, VW - 80));
 }
 // nuages de spores des faucheuses : ralentissent et grignotent la vie
@@ -1358,7 +1635,10 @@ function drawAll() {
     if (a.fi < 0) animStep(a, 0);
     draw(a);
     if (a.flash > 0) a.spr.setTintFill(0xffffff); else if (a.boss && a.phase === 2) a.spr.setTint(0xffd0b0); else if (a.st === 'grabbed') a.spr.setTint(0xffe0c8); else if (a.slot === 1) a.spr.setTint(mulTint(G.zoneTint, P2TINT)); else if (a.elite) a.spr.setTint(mulTint(G.zoneTint, ELITE[a.kind].tint)); else a.spr.setTint(G.zoneTint || 0xffffff);
-    if (a.inv > 0 && a.isPlayer && a.st !== 'dash' && a.st !== 'power' && a.st !== 'rush') a.spr.setAlpha(Math.floor(a.inv * 16) % 2 ? .45 : 1); else if (a.st !== 'gone' && !a.boss) a.spr.setAlpha(1);
+    if (a.inv > 0 && a.isPlayer && a.st !== 'dash' && a.st !== 'power' && a.st !== 'rush') a.spr.setAlpha(Math.floor(a.inv * 16) % 2 ? .45 : 1);
+    else if (a.kind === 'plongeur' && a.st === 'dive') { const pr = prog(a); a.spr.setAlpha(pr > .3 && pr < .62 ? 0 : 1); }
+    else if (a.st !== 'gone' && !a.boss) a.spr.setAlpha(a.kind === 'spectre' ? (a.clone ? .55 : .82) : a.decoy ? .9 : 1);
+    if (a.shade && a.flash <= 0) a.spr.setTint(0x6a4a9a);
     // petites barres de vie ennemies
     if (a.isPlayer && NPLAYERS > 1 && a.active && a.st !== 'out') { SC.bars.fillStyle(a.slot ? 0xffb37a : 0x8ef7ff, .9).fillTriangle(a.x - 9, a.y - CHAR.amara.h - a.z - 30, a.x + 9, a.y - CHAR.amara.h - a.z - 30, a.x, a.y - CHAR.amara.h - a.z - 18); }
     if (!a.isPlayer && !a.boss && !a.dead && a.hp < a.max) { const w = 60, x = a.x - w / 2, y = a.y - CHAR[a.kind].h - a.z - 18; SC.bars.fillStyle(0x0b0714, .8).fillRect(x - 1, y - 1, w + 2, 6).fillStyle(0xff3d5a, 1).fillRect(x, y, w * a.hp / a.max, 4); if (a.shield > 0) SC.bars.fillStyle(0xb07cff, 1).fillRect(x, y + 6, w * a.shield / a.shieldMax, 3); }
@@ -1378,6 +1658,12 @@ const TIPS = {
   held: () => 'Un capitaine te tient ! <b>Martèle les boutons</b> pour te libérer. En coop, ton partenaire peut le frapper.',
   weapon: () => 'Arme en main : plus de portée et de dégâts, elle s\'use. <b>Tempête</b> = la lancer. Tu la perds si tu tombes.',
   rank: () => 'Nouvelle <b>étoile</b> : coups plus forts et plus rapides. Tu en perds une à chaque chute.',
+  flood: () => 'Quand une vanne s\'ouvre, une vague balaie le sol : <b>saute</b> au bon moment.',
+  dark: () => 'Les lumières s\'éteignent par moments : reste près de ton partenaire et frappe ce que tu vois.',
+  harponneur: () => 'Ligne orange = harpon : <b>change de ligne</b> ou saute, sinon il te ramène à lui.',
+  plongeur: () => 'Le plongeur disparaît sous l\'eau et ressurgit <b>derrière toi</b> : retourne-toi vite.',
+  spectre: () => 'Le spectre se dédouble quand il faiblit : le reflet pâle tombe en un coup.',
+  lamelune: () => 'La lame-lune <b>pare</b> de face : prends-la de dos, utilise la Tempête ou une prise.',
   gusts: () => 'Les rafales poussent tout le monde : <b>avance contre le vent</b> ou profites-en pour pousser les ennemis dans le vide.',
   faucheuse: () => 'La faucheuse frappe loin et bas : <b>saute</b> par-dessus sa faucille, puis colle-la. Évite ses spores violettes.',
   yewa: () => 'Yewa-Nul vole : <b>frappe en sautant</b>, ou attends qu\'elle s\'épuise au sol après un piqué. Quitte les cercles verts.',
@@ -1389,7 +1675,7 @@ const TIPS = {
   brute: () => 'Bouclier frontal : contourne-la, <b>Tempête</b>, ou combo jusqu\'à le briser. <b>Saute</b> l\'onde au sol.',
   pretresse: () => 'La prêtresse protège ses alliés d\'un sceau : <b>frappe-la</b> pour le dissiper.',
   power: () => '<b>Tempête prête</b> (' + (touch ? 'bouton turquoise' : 'L') + ') : sur place = onde circulaire · <b>avec une direction</b> = Ruée-tempête. Sans énergie, elle coûte de la vie.',
-  boss: () => LV === 1 ? TIPS.yewa() : 'Oba Ferrum est blindé : <b>Tempête, tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
+  boss: () => LV === 1 ? TIPS.yewa() : LV > 1 ? (LEVELS[LV].boss.tip || '') : 'Oba Ferrum est blindé : <b>Tempête, tonneaux, projections</b> et finishers passent l\'armure. Saute ses ondes.',
   throwBoss: () => LV === 1 ? 'Renforts ! <b>Projette</b> une faucheuse : Yewa est touchée de plein fouet si elle plane bas.' : 'Renforts ! <b>Projette</b> un milicien sur le colosse.',
 };
 let tipQ = [], tipT = 0;
@@ -1786,7 +2072,7 @@ $('cskip').addEventListener('click', e => { e.stopPropagation(); endIntro(); });
 addEventListener('resize', () => { if (CN.on) fitCine(); });
 
 /* ---------- Dialogues : radio (sans pause) et scènes (avec pause) ---------- */
-const WHO = { amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'], yewa: ['Yewa-Nul', 'face_yewa.webp', '#8ef7c4'] };
+const WHO = { amara: ['Amara', 'face_amara.webp', '#f2b23a'], zuri: ['Zuri', 'face_zuri.webp', '#b07cff'], kofi: ['Kofi', 'face_kofi.webp', '#ff9a4d'], ferrum: ['Oba Ferrum', 'face_ferrum.webp', '#ff7a2f'], nyx: ['Voix inconnue', 'face_nyx.webp', '#9a5cff'], yewa: ['Yewa-Nul', 'face_yewa.webp', '#8ef7c4'], ijji: ['Ìjì', 'face_ijji.webp', '#c58cff'], oshun: ['Ọ̀ṣun', 'face_oshun.webp', '#5fe3e0'], eshu: ['Ẹ̀ṣù', 'face_eshu.webp', '#ff5a4a'], nyx2: ['Nyx', 'face_nyx.webp', '#9a5cff'] };
 const TALK = {
   start: [['zuri', 'Amara, je te reçois. La milice a bouclé le Marché Haut. Ouvre-toi un chemin jusqu\'au réacteur.'], ['amara', 'Ils ont choisi le mauvais jour.']],
   enc1: [['zuri', 'Des tireuses dans les ruelles. Quand la ligne violette s\'allume, frappe le tir : il repartira à l\'envoyeur.'], ['zuri', 'Et méfie-toi des brutes à bouclier. De face, elles sont des murs.']],
@@ -1805,7 +2091,43 @@ const TALK2 = {
   phase2: [['yewa', 'LE NUL ME DÉVORE !'], ['kofi', 'Elle déchaîne la tempête ! Frappe-la quand elle redescend, Amara !']],
   win: [['yewa', 'Mon souffle… il revient. Merci, fille d\'Ọya.'], ['yewa', 'Écoute-moi : Ọ̀run-Zéro est presque chargée. Ils ont vidé trop d\'esprits.'], ['nyx', 'Tu ne fais que retarder l\'inévitable, Amara. Rejoins-moi à la Flèche.'], ['kofi', 'Nyx… Elle t\'attend. Alors on y va ensemble, cette fois.']]
 };
-const TALKS = [TALK, TALK2];
+const TALK3 = {
+  start: [['kofi', 'Les Docks des Nuages ! Mon vieux cargo m\'attend au bout des quais. Ouvre-moi la route, petite sœur.'], ['amara', 'Prépare les moteurs. J\'arrive.']],
+  enc1: [['kofi', 'Les harponneurs tirent leur chaîne de loin. Quand le harpon s\'allume, change de ligne !'], ['amara', 'Et s\'ils me ratent, je leur rends la monnaie.']],
+  enc2: [['zuri', 'Le croissant violet bombarde les quais ! Regarde le sol : les ombres rouges montrent où ça tombe.'], ['amara', 'Ils tirent sur leurs propres docks…']],
+  enc3: [['kofi', 'Le vaisseau amiral d\'Ìjì est à quai. Ses cales sont pleines d\'esprits, je les entends d\'ici.'], ['amara', 'Alors on vide les cales.']],
+  boss: [['ijji', 'Une Gardienne sur mon pont ? Il y a une prime sur ta tête, Diallo.'], ['amara', 'Tes cales sont pleines d\'esprits. Ouvre-les.'], ['ijji', 'Ce sont des marchandises. Et toi, tu vas passer par-dessus bord.']],
+  phase2: [['ijji', 'FEU À VOLONTÉ ! Rasez-moi ce quai !'], ['kofi', 'Elle bombarde tout ! Reste mobile, Amara !']],
+  win: [['ijji', 'Mon vaisseau… Sombre-Lune paiera pour ça. Ou toi.'], ['kofi', 'Les cales s\'ouvrent ! Regarde-les s\'envoler, Amara.'], ['zuri', 'Les registres de bord parlent des Bassins d\'Ọ̀ṣun. Ils empoisonnent l\'eau de toute la cité.'], ['amara', 'Alors on descend sous la ville.']]
+};
+const TALK4 = {
+  start: [['zuri', 'Les Bassins d\'Ọ̀ṣun. Tu sens cette odeur de métal ? C\'est le Nul dans l\'eau.'], ['amara', 'Ọ̀ṣun protégeait ma grand-mère. À moi de la protéger.']],
+  enc1: [['zuri', 'Des plongeurs ! Ils disparaissent sous l\'eau et ressortent sous tes pieds. Guette les remous.'], ['amara', 'Je les attends.']],
+  enc2: [['kofi', 'Les vannes lâchent ! L\'eau monte : reste sur les passerelles, tu iras plus vite.'], ['amara', 'J\'ai de l\'eau jusqu\'aux genoux, Kofi !']],
+  enc3: [['zuri', 'Le grand bassin est juste devant. Ọ̀ṣun est là… mais elle ne te reconnaîtra peut-être pas.'], ['amara', 'Elle me reconnaîtra.']],
+  boss: [['oshun', 'Mon eau était douce… pourquoi a-t-elle ce goût de vide ?'], ['amara', 'Ils t\'ont empoisonnée, Ọ̀ṣun. Laisse-moi t\'aider.'], ['oshun', 'Personne ne touche à mes eaux. Personne !']],
+  phase2: [['oshun', 'LA CRUE EMPORTERA TOUT !'], ['zuri', 'Le bassin déborde ! Elle réduit l\'arène, Amara, ne te laisse pas acculer !']],
+  win: [['oshun', 'L\'eau chante de nouveau… Merci, Gardienne.'], ['oshun', 'Prends cette perle. Zuri t\'attend aux Archives d\'Ifá : quelqu\'un y joue avec les reflets.'], ['nyx', 'Encore un esprit rendu à une cité qui tombe. Tu crois sauver qui, Amara ?'], ['amara', 'Tout le monde, Nyx. Même toi.']]
+};
+const TALK5 = {
+  start: [['zuri', 'Bienvenue aux Archives d\'Ifá. Chaque masque ici garde un chemin. Ne touche à rien… enfin, à presque rien.'], ['amara', 'Je ne touche qu\'aux ennemis.']],
+  enc1: [['zuri', 'Des spectres d\'archives ! Ils disparaissent et réapparaissent dans ton dos. Écoute le froissement.'], ['amara', 'Des fantômes qui ont peur des coups de pied ?']],
+  enc2: [['zuri', 'Les lampes s\'éteignent ! Reste près des braseros : dans le noir, on ne voit que leurs yeux.'], ['amara', 'Alors je frapperai entre les yeux.']],
+  enc3: [['zuri', 'La salle des miroirs. Ẹ̀ṣù y est enfermé. Tant qu\'il est captif, tous les chemins mentent.'], ['amara', 'Je vais lui rendre ses routes.']],
+  boss: [['eshu', 'Une visiteuse ! Tous les chemins mènent ici, Gardienne. Lequel est le bon ?'], ['amara', 'Celui qui te libère, Ẹ̀ṣù.'], ['eshu', 'Ha ! Alors trouve-moi d\'abord.']],
+  phase2: [['eshu', 'MILLE REFLETS, MILLE MENSONGES !'], ['zuri', 'Il se démultiplie ! Les faux tombent en un coup : cherche celui qui ne se brise pas !']],
+  win: [['eshu', 'Bien joué. Les miroirs disent enfin la même chose.'], ['eshu', 'La passerelle mène à la Flèche d\'Ọ̀run. Ton ancienne maîtresse t\'y attend. Elle croit encore sauver la cité.'], ['zuri', 'Amara… je viens avec toi. Kofi aussi.'], ['amara', 'Alors on finit ça ensemble.']]
+};
+const TALK6 = {
+  start: [['kofi', 'Je tiens la base de la tour. Zuri brouille leurs défenses. Le reste, c\'est toi, petite sœur.'], ['amara', 'Merci, grand frère. Garde la porte.']],
+  enc1: [['zuri', 'Les Lames-Lune, la garde personnelle de Nyx. Elles parent tes coups : attrape-les ou frappe quand elles relèvent leur garde.'], ['amara', 'C\'est Nyx qui leur a appris ça. C\'est elle qui me l\'a appris aussi.']],
+  enc2: [['zuri', 'Tu entres dans l\'ascenseur orbital. Attention, des renforts vont sauter sur la plateforme !'], ['amara', 'Qu\'ils viennent.']],
+  enc3: [['zuri', 'Le sommet. Ọ̀run-Zéro est à pleine charge. Nyx est devant le cœur.'], ['amara', 'J\'y suis.']],
+  boss: [['nyx2', 'Tu as grandi, Amara. Tu as toujours eu le geste juste.'], ['amara', 'Arrête la machine, Nyx. Les esprits ne sont pas à nous.'], ['nyx2', 'La cité tombe depuis des années. J\'ai choisi de sauver ce qui pouvait l\'être. Montre-moi si ton geste suffit.']],
+  phase2: [['nyx2', 'ALORS SOUFFRE COMME J\'AI SOUFFERT !'], ['zuri', 'Elle inverse la gravité ! Fuis le cercle violet, Amara !']],
+  win: [['nyx2', '…Tu ne détruis pas la machine ?'], ['amara', 'Non. Je coupe toutes les chaînes à la fois. Les esprits porteront la cité.'], ['kofi', 'Elle descend… doucement. Nova-Kemet se pose sur les nuages !'], ['nyx2', 'Tu avais raison, Amara. On ne possède pas un esprit… on le porte.']]
+};
+const TALKS = [TALK, TALK2, TALK3, TALK4, TALK5, TALK6];
 let radioQ = [], radioT = 0, talkCb = null, talkQ = [], talkTyping = 0;
 function radio(lines) { radioQ.push(...lines); }
 function radioTick(dt) {
