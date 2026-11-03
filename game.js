@@ -7,6 +7,7 @@ document.body.classList.toggle('touch', touch);
 if (touch) $('keys').innerHTML = '<span><b>Joystick</b>8 directions</span><span><b>Frappe</b>combo en 3 coups</span><span><b>Pied</b>renverse · bas = balayage</span><span><b>Saut</b>+ Frappe en l\'air</span><span><b>Tempête</b>jauge turquoise</span><span><b>Esquive</b>ruée invincible</span>';
 
 const VW = 960, VH = 540;
+const AV = '?v=25'; // version des ressources : à incrémenter à chaque mise à jour des atlas (sinon cache navigateur = images décalées)
 const rnd = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -294,15 +295,15 @@ class Play extends Phaser.Scene {
     // décor d'abord (léger), puis les planches d'animation ; version allégée sur mobile (≈100 Mo de mémoire graphique au lieu de ≈300)
     // décor de l'acte en cours (clés préfixées par le numéro d'acte : les textures survivent au redémarrage de scène)
     const D = LEVELS[LV].dir, K = 'L' + LV, has = k => this.textures.exists(k) || this.cache.json.exists(k);
-    if (!has(K + 'stage')) this.load.json(K + 'stage', D + 'stage.json');
-    for (let i = 0; i < 3; i++) if (!has(K + 'st' + i)) this.load.image(K + 'st' + i, D + 'stage_' + i + '.webp');
-    if (!has(K + 'sky')) this.load.image(K + 'sky', D + 'st_sky.webp'); if (!has(K + 'fg')) this.load.image(K + 'fg', D + 'st_fg.webp');
-    if (!has('props')) { this.load.json('propsj', 'props.json'); this.load.image('props', 'props.webp'); }
-    if (!has('atlas')) this.load.json('atlas', ATL.main + '.json');
-    for (let i = 0; i < ATL.mainPages; i++) if (!has('m' + i)) this.load.image('m' + i, ATL.main + '_' + i + '.webp');
+    if (!has(K + 'stage')) this.load.json(K + 'stage', D + 'stage.json' + AV);
+    for (let i = 0; i < 3; i++) if (!has(K + 'st' + i)) this.load.image(K + 'st' + i, D + 'stage_' + i + '.webp' + AV);
+    if (!has(K + 'sky')) this.load.image(K + 'sky', D + 'st_sky.webp' + AV); if (!has(K + 'fg')) this.load.image(K + 'fg', D + 'st_fg.webp' + AV);
+    if (!has('props')) { this.load.json('propsj', 'props.json' + AV); this.load.image('props', 'props.webp' + AV); }
+    if (!has('atlas')) this.load.json('atlas', ATL.main + '.json' + AV);
+    for (let i = 0; i < ATL.mainPages; i++) if (!has('m' + i)) this.load.image('m' + i, ATL.main + '_' + i + '.webp' + AV);
     // planches propres à l'acte (nouvel ennemi + boss)
     const X = LEVELS[LV].atlas;
-    if (X) { const n = (LITE ? 'm' : '') + X; if (!has('atlas' + X)) this.load.json('atlas' + X, D + 'atlas_' + n + '.json'); for (let i = 0; i < (LITE ? 1 : 2); i++) if (!has(X + 'p' + i)) this.load.image(X + 'p' + i, D + 'atlas_' + n + '_' + i + '.webp'); }
+    if (X) { const n = (LITE ? 'm' : '') + X; if (!has('atlas' + X)) this.load.json('atlas' + X, D + 'atlas_' + n + '.json' + AV); for (let i = 0; i < (LITE ? 1 : 2); i++) if (!has(X + 'p' + i)) this.load.image(X + 'p' + i, D + 'atlas_' + n + '_' + i + '.webp' + AV); }
     this.load.on('loaderror', f => { LOADERR.push(f.key); });
   }
   create() {
@@ -317,7 +318,7 @@ class Play extends Phaser.Scene {
     else if (this.cache.json.exists('atlasB') && this.textures.exists('b0')) { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; }
     else {
       // atlas du boss de l'acte I chargé en arrière-plan pendant que l'on joue
-      BOSS_READY = false; this.load.json('atlasB', ATL.boss + '.json'); this.load.image('b0', ATL.boss + '_0.webp');
+      BOSS_READY = false; this.load.json('atlasB', ATL.boss + '.json' + AV); this.load.image('b0', ATL.boss + '_0.webp' + AV);
       this.load.once('complete', () => { regAtlas(this, this.cache.json.get('atlasB'), 'b'); BOSS_READY = true; });
       this.load.start();
     }
@@ -388,9 +389,12 @@ function regAtlas(sc, A, tp) {
 /* ---------- Animation ---------- */
 // coups dont l'animation dédiée n'est pas encore produite : on réutilise la plus proche
 const CLIP_ALIAS = { kick: 'atk3', kick2: 'kick', sweep: 'kick', rush: 'dash', held: 'hurt', win: 'idle', grab: 'atk1', knee: 'atk2', throw: 'atk3' };
+let TRACE = null;
 function setClip(a, clip, fps, loop, onEnd) {
   if (a.clip === clip && a.loop && loop) return;
+  if (TRACE) TRACE.push([G ? +G.t.toFixed(3) : 0, a.id, a.kind, clip, a.clip, a.fi]);
   const C = SC.META[a.kind].clips; if (!C[clip] && CLIP_ALIAS[clip] && C[CLIP_ALIAS[clip]]) clip = CLIP_ALIAS[clip]; if (!C[clip]) clip = C.idle ? 'idle' : Object.keys(C)[0];
+  const M = SC.META[a.kind].fpsMul; if (M && M[clip]) fps *= M[clip]; // plus d'images par coup : même durée, mouvement plus fluide
   a.clip = clip; a.frames = C[clip]; a.fps = fps; a.loop = !!loop; a.at = 0; a.fi = -1; a.onEnd = onEnd || null; a.ended = false;
 }
 function animStep(a, dt) {
@@ -710,7 +714,7 @@ function playerUpdate(p, dt) {
       const sp = (p.run ? 1.65 : 1) * (p.slowT > 0 ? .5 : 1) * HP_(p).spd;
       p.vx = mvx * 250 * sp; p.vy = mvy * 165; if (mvx) p.face = Math.sign(mvx);
       if (p.st !== 'walk') { p.st = 'walk'; setClip(p, 'walk', 30, true); }
-      p.fps = p.run ? 46 : 30; if (p.run && Math.random() < .25) SC.pDust.explode(1, p.x - p.face * 20, p.y);
+      p.fps = (p.run ? 46 : 30) * ((SC.META[p.kind].fpsMul || {}).walk || 1); if (p.run && Math.random() < .25) SC.pDust.explode(1, p.x - p.face * 20, p.y);
       tryGrab(p);
     }
     else { p.vx = p.vy = 0; p.run = false; p.runT = 0; if (p.st !== 'idle') toIdle(p); }
@@ -2002,9 +2006,9 @@ function ensureHeroes(list, cb) {
   const onProg = v => { const b = $('lbar'); if (b) b.style.width = Math.round(v * 100) + '%'; };
   L.on('progress', onProg);
   const done = () => { L.off('progress', onProg); for (const h of need) if (SC.cache.json.exists('H' + h) && SC.textures.exists('H' + h + 'p0')) { regAtlas(SC, SC.cache.json.get('H' + h), 'H' + h + 'p'); HLOADED[h] = 1; } $('loading').hidden = true; cb(); };
-  for (const h of need) if (!SC.cache.json.exists('H' + h)) L.json('H' + h, 'h/atlas_' + pre + h + '.json');
+  for (const h of need) if (!SC.cache.json.exists('H' + h)) L.json('H' + h, 'h/atlas_' + pre + h + '.json' + AV);
   L.once('complete', () => {
-    let n = 0; for (const h of need) { const J = SC.cache.json.get('H' + h); if (J) J.pages.forEach((pg, i) => { if (!SC.textures.exists('H' + h + 'p' + i)) { L.image('H' + h + 'p' + i, 'h/' + pg); n++; } }); }
+    let n = 0; for (const h of need) { const J = SC.cache.json.get('H' + h); if (J) J.pages.forEach((pg, i) => { if (!SC.textures.exists('H' + h + 'p' + i)) { L.image('H' + h + 'p' + i, 'h/' + pg + AV); n++; } }); }
     if (!n) { done(); return; } L.once('complete', done); L.start();
   });
   L.start();
@@ -2093,12 +2097,12 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (remapWait && remapWait.kind === 'key') { e.preventDefault(); if (k !== 'escape') { const old = CTRL.key[remapWait.act]; for (const a in CTRL.key) if (CTRL.key[a] === k) CTRL.key[a] = old; CTRL.key[remapWait.act] = k; saveCtrl(); } remapWait = null; renderCtrl(); return; }
   if (!$('ctrl').hidden) { if (k === 'escape') closeCtrl(); return; }
-  if (k === 'escape' || k === CTRL.key.pause) { setPause(!paused); return; }
   if (state === 'title' && k === 'enter') { audio(); startGame(); return; }
   if (state === 'title' && (k === 'arrowleft' || k === 'arrowright')) { const i = HERO_IDS.indexOf(PICK[0]); pickHero(0, HERO_IDS[(i + (k === 'arrowright' ? 1 : HERO_IDS.length - 1)) % HERO_IDS.length]); return; }
   if (state === 'cine' && (k === 'enter' || k === 'escape' || k === ' ')) { e.preventDefault(); endIntro(); return; }
   if (state === 'talk' && (k === 'enter' || k === ' ' || k === CTRL.key.atk || k === CTRL.key.jump || e.code === 'Numpad1')) { e.preventDefault(); nextTalk(); return; }
   if (state === 'story' && (k === 'enter' || k === ' ')) { e.preventDefault(); $('bNext').click(); return; }
+  if (state === 'play' && (k === 'escape' || k === CTRL.key.pause)) { setPause(!paused); return; }
   if (state !== 'play' || paused) return;
   // un joueur au clavier pavé rejoint en cours de partie : Entrée du pavé numérique
   if (e.code === 'NumpadEnter') { const s = DM.kb2 >= 0 ? DM.kb2 : G.players.findIndex(q => !q.active); if (s >= 0) { if (DM.kb2 < 0) { CTRL.slots[s] === 'auto' && (DM.kb2 = s); } joinSlot(s); } return; }
@@ -2515,5 +2519,5 @@ window.GAME = new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' }, fps: { target: 60 },
   scene: [Play]
 });
-window.__orun = { get G() { return G; }, get state() { return state; }, inp, INP, join(s) { joinPlayer(G.players[s || 1]); }, devMap: () => devMap(), CTRL, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
+window.__orun = { trace(on) { const t = TRACE; TRACE = on ? [] : null; return t; }, get G() { return G; }, get state() { return state; }, inp, INP, join(s) { joinPlayer(G.players[s || 1]); }, devMap: () => devMap(), CTRL, dbg: { spawn: (...a) => spawn(...a), enemyGrab: (e, p) => enemyGrab(e, p), takeWeapon: (p, k) => takeWeapon(p, k), hurtPlayer: (...a) => hurtPlayer(...a), tryGrab: p => tryGrab(p), victory: () => victory(), probe: (p, e) => ({ pr: prog(p), clip: p.clip, n: p.frames.length, at: p.at, inF: inFront(p, e, 150, 42), hit: e.hitIds.has(p.atkId), id: p.atkId, fs: p.fps }) }, warp(n) { G.checkpoint = n; retry(); }, cine(n, cb) { const c = CINES[n]; startCine(c, c.len, 'title', cb, n === LEVELS.length - 1 ? 'Fin · Merci d\'avoir joué' : LEVELS[n + 1].name); }, cines: () => CINES.map(c => c.map(s => s.t)), level(n) { CARRY = { score: 0, cont: 2, np: NPLAYERS, players: [] }; G = null; setLevel(n); SC.scene.restart(); } };
 })();

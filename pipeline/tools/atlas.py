@@ -11,10 +11,23 @@ PAGE = 4096; PAD = 2
 def load_src(pattern, pre):
     fs = sorted(glob.glob(pattern)); ims = []
     for f in fs:
-        im = Image.open(f).convert('RGBA')
+        im = Image.open(f).convert('RGBA'); big = im.width >= 900 or im.height >= 700
         if pre != 1: im = im.resize((round(im.width * pre), round(im.height * pre)), Image.LANCZOS)
-        a = np.array(im); a[:, :, 3] = np.where(a[:, :, 3] < 28, 0, a[:, :, 3]); ims.append(Image.fromarray(a))
+        a = np.array(im); a[:, :, 3] = np.where(a[:, :, 3] < 28, 0, a[:, :, 3]); ims.append(Image.fromarray(feather(a) if big else a))
     return ims
+
+def feather(a):
+    # effet coupé net par le bord de la vidéo : on l'estompe au lieu d'afficher une arête droite
+    al = a[:, :, 3].astype(float); H, W = al.shape; m = al > 100
+    for side in ('l', 'r', 't'):
+        edge = m[:, :3].any(1) if side == 'l' else m[:, -3:].any(1) if side == 'r' else m[:3, :].any(0)
+        n = edge.sum(); L = H if side != 't' else W
+        if n < max(24, .10 * L): continue
+        d = int(max(40, (W if side != 't' else H) * .3)); r = np.clip(np.arange(d) / d, 0, 1); ramp = r * r * (3 - 2 * r)
+        if side == 'l': al[:, :d] *= ramp[None, :]
+        elif side == 'r': al[:, -d:] *= ramp[::-1][None, :]
+        else: al[:d, :] *= ramp[:, None]
+    a = a.copy(); a[:, :, 3] = np.where(al < 28, 0, al).astype(np.uint8); return a
 
 def feet_anchor(ims, idx):
     a = np.array(ims[idx])[:, :, 3] > 120
@@ -38,7 +51,7 @@ for char, cs in spec.items():
         ims = load_src(pattern, pre * s); srcs[name] = ims
         anchors[name] = feet_anchor(ims, cs.get('anchor_frame', {}).get(name, 0))
     cmeta = {'clips': {}, 'frames': {}}
-    cache = {}
+    cache = {}; cbx = {}
     for clip, segs in cs['clips'].items():
         keys = []
         for seg in segs:
@@ -48,7 +61,7 @@ for char, cs in spec.items():
                 if k not in cache:
                     im = srcs[src][i]; bb = im.getbbox()
                     if not bb: bb = (0, 0, 2, 2)
-                    t = im.crop(bb); pg, x, y = place(t)
+                    t = im.crop(bb); pg, x, y = place(t); cbx[k] = bb[0]
                     if mode == 'g': ax, ay = anchors[src][0] - bb[0], anchors[src][1] - bb[1]
                     elif mode == 'cb':  # recentré sur le corps (colonne la plus dense), pieds en bas : déplacements portés par le moteur
                         col = np.convolve(np.array(t)[:, :, 3].astype(float).sum(0), np.ones(31) / 31, 'same'); ax, ay = float(col.argmax()), t.height
@@ -58,8 +71,14 @@ for char, cs in spec.items():
                     cmeta['frames'][k] = [pg, x, y, t.width, t.height, round(ax / t.width, 4), round(ay / t.height, 4)]
                 keys.append(k)
         cmeta['clips'][clip] = keys
+        cb = [k for k in keys if k.endswith('_cb')]
+        if len(cb) >= 3:  # ancrage horizontal lissé (moyenne glissante en coordonnées source) : plus de tremblement
+            xs = [cmeta['frames'][k][5] * cmeta['frames'][k][3] + cbx[k] for k in cb]
+            sm = [float(np.mean(xs[max(0, i - 1):i + 2])) for i in range(len(xs))]
+            for k, x in zip(cb, sm): f = cmeta['frames'][k]; f[5] = round((x - cbx[k]) / f[3], 4)
     # hauteur de référence (idle) pour l'échelle en jeu
     ref = srcs[cs['ref'][0]][cs['ref'][1]]; bb = ref.getbbox(); cmeta['refH'] = bb[3] - bb[1]
+    if cs.get('fpsMul'): cmeta['fpsMul'] = {c: v for c, v in cs['fpsMul'].items() if abs(v - 1) > .01}
     meta[char] = cmeta
     print(char, len(cmeta['frames']), 'frames, refH', cmeta['refH'], 'pages', len(page_imgs))
 
