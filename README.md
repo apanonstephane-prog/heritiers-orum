@@ -47,3 +47,6 @@ Chaque acte se termine par une cinématique (plans dans `cine/`, séquences `CIN
 ```html
 <iframe src="https://heritiers-orun.vercel.app" allow="autoplay; fullscreen; gamepad" style="width:100%;aspect-ratio:16/9;border:0"></iframe>
 ```
+
+## Bruitages
+`sfx/*.mp3` : enregistrements **Kenney Impact Sounds / RPG Audio (CC0)** mixés avec des souffles, explosions et tonnerre synthétisés (`sfx/list.json` liste les variantes). La synthèse WebAudio ne sert plus qu'en secours pendant le chargement.
