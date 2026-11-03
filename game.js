@@ -252,7 +252,7 @@ let SC = null;   // scène
 let G = null;    // état de partie
 let state = 'loading', paused = false;
 // une entrée par joueur ; inp = joueur 1 (clavier principal, tactile, 1re manette)
-const mkInp = () => ({ x: 0, y: 0, kx: 0, ky: 0, jx: 0, jy: 0, gx: 0, gy: 0, atk: 0, kick: 0, jump: 0, pow: 0, dash: 0, runReq: 0 });
+const mkInp = () => ({ x: 0, y: 0, kx: 0, ky: 0, jx: 0, jy: 0, gx: 0, gy: 0, atk: 0, kick: 0, jump: 0, pow: 0, dash: 0, heavy: 0, sweep: 0, sup2: 0, runReq: 0 });
 const INP = [mkInp(), mkInp()];
 const inp = INP[0];
 let NPLAYERS = 1;
@@ -353,7 +353,7 @@ class Play extends Phaser.Scene {
 
 let BOSS_READY = false, RESIZE_BOUND = false; const SEEN = {}; const LOADERR = [];
 const LITE = touch || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.deviceMemory && navigator.deviceMemory <= 4);
-const ATL = LITE ? { main: 'atlas_mmain', mainPages: 2, boss: 'atlas_mboss' } : { main: 'atlas_main', mainPages: 3, boss: 'atlas_boss' };
+const ATL = LITE ? { main: 'atlas_mmain', mainPages: 2, boss: 'atlas_mboss' } : { main: 'atlas_main', mainPages: 4, boss: 'atlas_boss' };
 function regAtlas(sc, A, tp) {
   for (const c in A.chars) {
     const C = A.chars[c]; C.tp = tp; sc.META[c] = C;
@@ -512,7 +512,7 @@ function softFlash(ms, r, g, b) {
 /* ---------- Combat ---------- */
 // boîte de coup : portée devant, tolérance de profondeur, hauteur
 function inFront(a, b, reach, depth, back) {
-  const dx = (b.x - a.x) * a.face; return dx > -(back || 20) && dx < reach && Math.abs(b.y - a.y) < depth && Math.abs((b.z || 0) - a.z) < 110;
+  const dx = (b.x - a.x) * a.face; return dx > -(back || 20) && dx < reach && Math.abs(b.y - a.y) < depth && Math.abs((b.z || 0) - a.z) < (a.st === 'airAtk' ? 220 : 110); // coup aérien : porte vers le bas
 }
 function hitEnemy(e, dmg, kind, src) {
   if (e.dead || e.st === 'tpout' || e.inv > 0) return false;
@@ -615,24 +615,27 @@ const ATK = {
   atk2: { fps: 30, win: [.25, .75], reach: 160, dmg: 11, lunge: 40, kind: 'light' },
   atk3: { fps: 30, win: [.45, .85], reach: 190, dmg: 18, lunge: 60, kind: 'heavy' },
   airAtk: { fps: 26, win: [.15, .9], reach: 160, dmg: 15, lunge: 0, kind: 'heavy' },
+  airSlash: { fps: 26, win: [.2, .8], reach: 175, dmg: 16, lunge: 0, kind: 'heavy', depth: 55 },
+  airKick: { fps: 24, win: [.2, .95], reach: 165, dmg: 18, lunge: 0, kind: 'heavy', depth: 55 },
+  heavy: { fps: 26, win: [.32, .62], reach: 210, dmg: 24, lunge: 50, kind: 'power', depth: 55 },
   dash: { fps: 30, win: [.1, .75], reach: 170, dmg: 13, lunge: 0, kind: 'heavy' },
   kick: { fps: 24, win: [.3, .7], reach: 185, dmg: 15, lunge: 35, kind: 'heavy' },
   kick2: { fps: 22, win: [.35, .75], reach: 195, dmg: 18, lunge: 40, kind: 'heavy' },
-  sweep: { fps: 22, win: [.35, .85], reach: 175, dmg: 12, lunge: 10, kind: 'heavy', depth: 60 },
+  sweep: { fps: 22, win: [.33, .68], reach: 185, dmg: 13, lunge: 10, kind: 'power', depth: 60 },
   rush: { fps: 16, win: [.05, .85], reach: 150, dmg: 26, lunge: 0, kind: 'power', depth: 60 }
 };
 function startAtk(p, clip) {
   const I = p.inp;
   if (I.x && clip !== 'dash') p.face = Math.sign(I.x); // coup arrière : on se retourne en frappant
   p.st = clip; p.t = 0; p.atkId++; sfx.swing(); const A = ATK[clip];
-  setClip(p, clip, A.fps * (p.weapon && p.weapon.kind === 'hammer' ? .85 : 1) * RANKS[p.rank - 1].spd, false, () => { if (p.st === clip) { if (p.buffer && (clip === 'atk1' || clip === 'atk2')) { const b = p.buffer; p.buffer = 0; startAtk(p, b === 2 ? 'kick2' : clip === 'atk1' ? 'atk2' : 'atk3'); } else toIdle(p); } });
+  setClip(p, clip, A.fps * (p.weapon && p.weapon.kind === 'hammer' ? .85 : 1) * RANKS[p.rank - 1].spd, false, () => { if (p.st === clip) { if (p.buffer && (clip === 'atk1' || clip === 'atk2')) { const b = p.buffer; p.buffer = 0; startAtk(p, b === 3 ? 'heavy' : b === 2 ? 'kick2' : clip === 'atk1' ? 'atk2' : 'atk3'); } else toIdle(p); } });
   p.fx = false;
 }
 function playerUpdate(p, dt) {
   const I = p.inp, mvx = I.x, mvy = I.y;
   p.slowT = Math.max(0, (p.slowT || 0) - dt);
   p.inv = Math.max(0, p.inv - dt); p.dashCd = Math.max(0, p.dashCd - dt); p.flash = Math.max(0, p.flash - dt); p.grabCd = Math.max(0, p.grabCd - dt);
-  if (p.st === 'out') { I.atk = I.jump = I.dash = I.kick = 0; if (I.pow) { I.pow = 0; rejoin(p); } return; }
+  if (p.st === 'out') { I.atk = I.jump = I.dash = I.kick = I.heavy = I.sweep = I.sup2 = 0; if (I.pow) { I.pow = 0; rejoin(p); } return; }
   if (p.st === 'grab') { grabUpdate(p, dt); return; }
   if (p.st === 'held') { heldUpdate(p, dt); return; }
   const fl = floorAt(p.x);
@@ -651,19 +654,30 @@ function playerUpdate(p, dt) {
     else if (ok) floatTxt(p.x, p.y - 230, 'TROP FAIBLE', '#ff5a6e');
   }
   if (I.dash) { I.dash = 0; if (p.dashCd <= 0 && grounded && ['idle', 'walk', 'atk1', 'atk2', 'land'].includes(p.st)) { if (mvx) p.face = Math.sign(mvx); p.st = 'dash'; p.t = 0; p.inv = .35; p.dashCd = .75; p.atkId++; sfx.dash(); setClip(p, 'dash', 30, false, () => p.st === 'dash' && toIdle(p)); } }
-  if (I.jump) { I.jump = 0; if (grounded && ['idle', 'walk', 'land'].includes(p.st)) { p.st = 'air'; p.vz = 640; p.z = 1; p.airAtk = false; sfx.jump(); SC.pDust.explode(6, p.x, p.y); setClip(p, 'jumpUp', 14, false); } }
+  if (I.jump) { I.jump = 0; if (grounded && ['idle', 'walk', 'land'].includes(p.st)) { p.st = 'air'; p.grav = 2100; p.vz = 860; p.z = 1; p.airAtk = false; p.airKind = null; sfx.jump(); SC.pDust.explode(6, p.x, p.y); setClip(p, 'jumpUp', 14, false); } }
   if (I.kick) {
     I.kick = 0;
     if (p.st === 'idle' || p.st === 'walk' || p.st === 'land') startAtk(p, mvy > .5 ? 'sweep' : 'kick');
     else if ((p.st === 'atk1' || p.st === 'atk2') && prog(p) > .35) p.buffer = 2; // finisher au pied
-    else if (p.st === 'air' && !p.airAtk) { p.airAtk = true; p.st = 'airAtk'; p.atkId++; sfx.swing(); setClip(p, 'airAtk', 26, false); }
+    else if (p.st === 'air' && !p.airAtk) airStrike(p, 'airKick');
   }
   if (I.atk) {
     I.atk = 0;
     if (p.st === 'walk' && p.run) { p.st = 'dash'; p.t = 0; p.atkId++; p.run = false; p.runT = 0; p.blitz = true; sfx.dash(); setClip(p, 'dash', 30, false, () => p.st === 'dash' && toIdle(p)); } // coup en course
     else if (p.st === 'idle' || p.st === 'walk' || p.st === 'land') startAtk(p, 'atk1');
     else if ((p.st === 'atk1' || p.st === 'atk2') && prog(p) > .35) p.buffer = 1;
-    else if (p.st === 'air' && !p.airAtk) { p.airAtk = true; p.st = 'airAtk'; p.atkId++; sfx.swing(); setClip(p, 'airAtk', 26, false); }
+    else if (p.st === 'air' && !p.airAtk) airStrike(p, 'airSlash');
+  }
+  if (I.sweep) { I.sweep = 0; if (p.st === 'idle' || p.st === 'walk' || p.st === 'land') startAtk(p, 'sweep'); else if (p.st === 'air' && !p.airAtk) airStrike(p, 'airKick'); }
+  if (I.heavy) {
+    I.heavy = 0;
+    if (p.st === 'idle' || p.st === 'walk' || p.st === 'land') startAtk(p, 'heavy');
+    else if ((p.st === 'atk1' || p.st === 'atk2') && prog(p) > .35) p.buffer = 3; // finisher lourd
+    else if (p.st === 'air' && !p.airAtk) airStrike(p, 'airSlash');
+  }
+  if (I.sup2) {
+    I.sup2 = 0; const ok = grounded && ['idle', 'walk', 'atk1', 'atk2', 'atk3', 'kick', 'land', 'hurt'].includes(p.st);
+    if (ok && p.en >= 75) { p.en -= 75; foudre(p); } else if (ok) floatTxt(p.x, p.y - 230, 'FOUDRE : 75 %', '#ff5a6e');
   }
   // états
   if (p.st === 'idle' || p.st === 'walk') {
@@ -686,13 +700,13 @@ function playerUpdate(p, dt) {
     p.vx = p.st === 'dash' ? p.face * (pr < .7 ? 720 : 120) : p.st === 'rush' ? p.face * (pr < .75 ? 940 : 60) : (pr < .4 ? p.face * A.lunge * 3 : 0); p.vy = 0;
     if ((p.st === 'dash' || p.st === 'rush') && pr < .75 && Math.random() < (p.st === 'rush' ? 1 : .6)) (p.slot ? SC.pFire : SC.pBolt).explode(p.st === 'rush' ? 4 : 2, p.x - p.face * 30, p.y - 100);
     if (p.st === 'rush' && Math.random() < .3) bolt(p.x - p.face * 120, p.y - 110, p.x + p.face * 40, p.y - 100 + rnd(-30, 30), p.slot ? 0xffb37a : 0x9ff6ff);
-  } else if (p.st === 'hurt' || p.st === 'land' || p.st === 'power' || p.st === 'getup') { p.vx = 0; p.vy = 0; }
+  } else if (p.st === 'hurt' || p.st === 'land' || p.st === 'power' || p.st === 'super2' || p.st === 'getup') { p.vx = 0; p.vy = 0; }
   if (p.st !== 'dash') p.blitz = false;
   // coups portés
-  const A = ATK[p.st];
+  const A = p.st === 'airAtk' ? ATK[p.airKind || 'airAtk'] : ATK[p.st];
   if (A) {
     const pr = prog(p);
-    if (pr >= A.win[0] && !p.fx) { p.fx = true; slashFx(p.x + p.face * 90, p.y - 115 - p.z, p.face, p.weapon && p.weapon.kind === 'hammer' ? 0xffa040 : p.slot ? 0xffc08a : 0x9ff6ff, p.st === 'atk3' ? 1.25 : .95); if (p.st === 'atk3') { sfx.zap(); SC.pBolt.explode(14, p.x + p.face * 100, p.y - 100); } }
+    if (pr >= A.win[0] && !p.fx) { p.fx = true; slashFx(p.x + p.face * 90, p.y - 115 - p.z, p.face, p.weapon && p.weapon.kind === 'hammer' ? 0xffa040 : p.slot ? 0xffc08a : 0x9ff6ff, p.st === 'atk3' || p.st === 'heavy' ? 1.25 : .95); if (p.st === 'atk3' || p.st === 'heavy') { sfx.zap(); SC.pBolt.explode(14, p.x + p.face * 100, p.y - 100); } }
     if (pr >= A.win[0] && pr <= A.win[1]) {
       const reach = A.reach * (p.weapon && p.weapon.kind === 'spear' ? 1.4 : 1) * (p.st === 'dash' && p.blitz ? RANKS[p.rank - 1].blitz : 1);
       for (const e of G.en) if (!e.dead && !e.hitIds.has(p.atkId) && inFront(p, e, reach + (e.boss ? 60 : 0), e.boss ? 70 : (A.depth || 42))) {
@@ -715,7 +729,7 @@ function playerUpdate(p, dt) {
 }
 function physics(a, dt) {
   a.x += a.vx * dt; a.y += a.vy * dt;
-  if (a.z > 0 || a.vz > 0) { a.vz -= 1900 * dt; a.z += a.vz * dt; if (a.z <= 0) { a.z = 0; a.vz = 0; if (a.st === 'fall' || a.st === 'dying' || a.st === 'dead') a.vx *= .35; } }
+  if (a.z > 0 || a.vz > 0) { a.vz -= (a.grav || 1900) * dt; a.z += a.vz * dt; if (a.z <= 0) { a.z = 0; a.vz = 0; if (a.st === 'fall' || a.st === 'dying' || a.st === 'dead') a.vx *= .35; } }
   else if (a.st === 'fall' || a.st === 'dying' || a.st === 'dead') a.vx *= Math.pow(.02, dt);
 }
 function power(p) {
@@ -737,6 +751,32 @@ function rush(p) {
   p.st = 'rush'; p.t = 0; p.inv = .7; p.atkId++; p.vy = 0; sfx.charge(); sfx.dash(); updHUD();
   setClip(p, 'rush', 22, false, () => p.st === 'rush' && toIdle(p));
   softFlash(90, 160, 250, 255); glowFx(p.x, p.y - 100, p.slot ? 0xffb37a : 0x8ef7ff, 5, 300);
+}
+
+/* ---------- Attaques aériennes ---------- */
+function airStrike(p, kind) {
+  const I = p.inp; if (I.x) p.face = Math.sign(I.x);
+  p.airAtk = true; p.airKind = kind; p.st = 'airAtk'; p.atkId++; p.fx = false; sfx.swing();
+  if (p.vz < 0) p.vz *= .4; // petit flottement pour que le coup porte
+  setClip(p, kind, ATK[kind].fps, false);
+}
+
+/* ---------- Foudre céleste : 2e super (75 % d'énergie) ---------- */
+function foudre(p) {
+  if (p.inp.x) p.face = Math.sign(p.inp.x);
+  p.st = 'super2'; p.t = 0; p.inv = 1.8; p.vx = p.vy = 0; p.atkId++; sfx.charge(); updHUD();
+  floatTxt(p.x, p.y - 280, 'FOUDRE CÉLESTE', '#8ef7ff', true);
+  setClip(p, 'super2', 22, false, () => p.st === 'super2' && toIdle(p));
+  later(.25, () => { if (!p.active || p.st !== 'super2') return; bolt(p.x + p.face * 10, -40, p.x + p.face * 10, p.y - 200, 0xffffff); glowFx(p.x, p.y - 180, 0x8ef7ff, 5, 300); sfx.zap(); });
+  later(.55, () => {
+    if (!p.active || p.st === 'out') return;
+    const cx = p.x + p.face * 200;
+    sfx.storm(); shake(480, .018); softFlash(200, 200, 255, 255); hitstop(.14);
+    ringFx(cx, p.y, 0x8ef7ff, 360, 600, true); glowFx(cx, p.y - 60, 0xffffff, 8, 500);
+    for (let i = 0; i < 7; i++) { const x = cx + (i - 3) * 85 + rnd(-20, 20); bolt(x, -40, x + rnd(-30, 30), p.y + rnd(-40, 40), i % 2 ? 0xffffff : 0x8ef7ff); SC.pBolt.explode(10, x, p.y - 40); }
+    for (const e of G.en) if (!e.dead && (e.x - p.x) * p.face > -140 && (e.x - p.x) * p.face < 560 && Math.abs(e.y - p.y) < 130) { hitEnemy(e, 40, 'power', p); SC.pBolt.explode(12, e.x, e.y - 100); }
+    for (const o of G.props) if (!o.dead && (o.x - p.x) * p.face > -140 && (o.x - p.x) * p.face < 560 && Math.abs(o.y - p.y) < 130) hitProp(o, p, 'power');
+  });
 }
 
 /* ---------- Prise & projection ---------- */
@@ -1806,7 +1846,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 // clavier : en solo, flèches et ZQSD/WASD pilotent Amara ; à deux, flèches + pavé numérique = J2
 const KEYS = { arrowleft: 'l', q: 'l', a: 'l', arrowright: 'r', d: 'r', arrowup: 'u', z: 'u', w: 'u', arrowdown: 'd', s: 'd' };
 const ARROWS = { arrowleft: 1, arrowright: 1, arrowup: 1, arrowdown: 1 };
-const P2PAD = { Numpad1: 'atk', Numpad2: 'jump', Numpad3: 'pow', Numpad0: 'dash', Numpad4: 'kick', Numpad5: 'kick' };
+const P2PAD = { Numpad1: 'atk', Numpad2: 'jump', Numpad3: 'pow', Numpad0: 'dash', Numpad4: 'kick', Numpad5: 'heavy', Numpad6: 'sup2', Numpad7: 'sweep' };
 const held = [new Set(), new Set()];
 const lastTap = [{ d: '', t: 0 }, { d: '', t: 0 }];
 function keyDir(i) { const h = held[i], I = INP[i]; I.kx = (h.has('r') ? 1 : 0) - (h.has('l') ? 1 : 0); I.ky = (h.has('d') ? 1 : 0) - (h.has('u') ? 1 : 0); }
@@ -1831,6 +1871,9 @@ addEventListener('keydown', e => {
   if (k === 'j' || k === 'x') inp.atk = 1;
   else if (k === 'i' || k === 'h') inp.kick = 1;
   else if (k === 'k' || k === ' ' || k === 'c') { inp.jump = 1; e.preventDefault(); }
+  else if (k === 'u') inp.heavy = 1;
+  else if (k === 'o') inp.sup2 = 1;
+  else if (k === 'n') inp.sweep = 1;
   else if (k === 'l' || k === 'v') inp.pow = 1;
   else if (k === 'shift' || k === 'u' || k === 'b') inp.dash = 1;
 });
@@ -1850,7 +1893,7 @@ function pollPad() {
     let ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
     if (b(14)) ax = -1; if (b(15)) ax = 1; if (b(12)) ay = -1; if (b(13)) ay = 1;
     I.gx = Math.abs(ax) > .35 ? Math.sign(ax) : 0; I.gy = Math.abs(ay) > .35 ? Math.sign(ay) : 0; used[slot] = true;
-    if (state === 'play' && !paused) { if (edge(0)) I.jump = 1; if (edge(2)) I.atk = 1; if (edge(3)) I.kick = 1; if (edge(1)) I.dash = 1; if (edge(5) || edge(7) || edge(4)) I.pow = 1; }
+    if (state === 'play' && !paused) { if (edge(0)) I.jump = 1; if (edge(2)) I.atk = 1; if (edge(3)) I.kick = 1; if (edge(1)) I.dash = 1; if (edge(4) || edge(7)) I.pow = 1; if (edge(5)) I.heavy = 1; if (edge(6)) I.sup2 = 1; }
     // START sur une 2e manette : le J2 rejoint (ou revient avec un crédit)
     if (edge(9) && state === 'play' && G && gi === 1 && !G.players[1].active) { NPLAYERS = 2; joinPlayer(G.players[1]); }
     else if (edge(9) && state === 'play' && G && G.players[slot].st === 'out') rejoin(G.players[slot]);
@@ -1869,7 +1912,7 @@ function bindBtn(id, key) {
   b.addEventListener('pointerdown', e => { e.preventDefault(); audio(); b.classList.add('on'); if (state === 'play' && !paused) inp[key] = 1; });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => b.classList.remove('on'));
 }
-bindBtn('bAtk', 'atk'); bindBtn('bKick', 'kick'); bindBtn('bJump', 'jump'); bindBtn('bPow', 'pow'); bindBtn('bDash', 'dash');
+bindBtn('bAtk', 'atk'); bindBtn('bKick', 'kick'); bindBtn('bHeavy', 'heavy'); bindBtn('bSweep', 'sweep'); bindBtn('bSup', 'sup2'); bindBtn('bJump', 'jump'); bindBtn('bPow', 'pow'); bindBtn('bDash', 'dash');
 const joy = $('joy'), knob = $('knob'); let jid = null, jc = [0, 0];
 function joyMove(e) {
   let dx = e.clientX - jc[0], dy = e.clientY - jc[1]; if (ROT) [dx, dy] = [dy, -dx];

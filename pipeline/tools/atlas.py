@@ -50,6 +50,7 @@ for char, cs in spec.items():
                     if not bb: bb = (0, 0, 2, 2)
                     t = im.crop(bb); pg, x, y = place(t)
                     if mode == 'g': ax, ay = anchors[src][0] - bb[0], anchors[src][1] - bb[1]
+                    elif mode == 'b': ax, ay = anchors[src][0] - bb[0], t.height  # saut : pieds = bas de la frame, la hauteur vient de la physique
                     else: ax, ay = t.width / 2, t.height / 2
                     cache[k] = 1
                     cmeta['frames'][k] = [pg, x, y, t.width, t.height, round(ax / t.width, 4), round(ay / t.height, 4)]

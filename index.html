@@ -86,14 +86,18 @@ body.touch #boss{width:min(360px,34vw)}
 #joy{position:absolute;left:calc(24px + var(--sl));bottom:calc(22px + var(--sb));width:136px;height:136px;border-radius:50%;z-index:4;display:none;touch-action:none;background:radial-gradient(circle,rgba(11,7,20,.2) 0 38%,rgba(11,7,20,.5) 39%);border:2px solid rgba(247,238,223,.3)}
 body.touch.playing #joy{display:block}
 #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd36b,#b9761a 70%);border:2px solid rgba(255,255,255,.7);box-shadow:0 6px 14px rgba(0,0,0,.5)}
-.pad{position:absolute;right:calc(18px + var(--sr));bottom:calc(16px + var(--sb));z-index:4;display:none;grid-template-columns:auto auto auto auto;grid-template-rows:auto auto;gap:9px;align-items:center;justify-items:center}
+.pad{position:absolute;right:calc(14px + var(--sr));bottom:calc(14px + var(--sb));z-index:4;display:none;grid-template-columns:auto auto auto auto auto;grid-template-rows:auto auto;gap:8px;align-items:center;justify-items:center}
 body.touch.playing .pad{display:grid}
 .btn{width:62px;height:62px;border-radius:50%;border:2px solid rgba(247,238,223,.45);background:rgba(11,7,20,.42);color:var(--paper);font:700 10px/1.1 var(--ui);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;text-align:center;touch-action:none;transition:transform .05s}
-#bAtk{width:86px;height:86px;grid-column:3;grid-row:1/3;border-color:var(--gold);color:var(--gold);font-size:12px}
-#bJump{grid-column:2;grid-row:2}
-#bKick{grid-column:4;grid-row:1/3;width:70px;height:70px;border-color:#ff9a4d;color:#ff9a4d}
-#bDash{grid-column:1;grid-row:2}
+#bAtk{width:80px;height:80px;grid-column:4;grid-row:1/3;border-color:var(--gold);color:var(--gold);font-size:12px}
+#bKick{grid-column:5;grid-row:1/3;width:68px;height:68px;border-color:#ff9a4d;color:#ff9a4d}
+#bHeavy{grid-column:3;grid-row:1;border-color:#ffd36b;color:#ffd36b}
+#bJump{grid-column:3;grid-row:2}
 #bPow{grid-column:2;grid-row:1;border-color:var(--teal);color:var(--teal)}
+#bDash{grid-column:2;grid-row:2}
+#bSup{grid-column:1;grid-row:1;border-color:#8ef7ff;color:#8ef7ff}
+#bSweep{grid-column:1;grid-row:2;border-color:#ff9a4d;color:#ff9a4d;font-size:9px}
+.pad .btn{box-sizing:border-box;padding:0;width:56px;height:56px;font-size:9.5px;letter-spacing:.02em}.pad #bAtk{width:78px;height:78px;font-size:12px}.pad #bKick{width:64px;height:64px;font-size:11px}
 .btn.on{transform:scale(.92);background:rgba(242,178,58,.45)}
 
 /* Écrans */
@@ -192,8 +196,11 @@ h1 em{font-style:normal;color:var(--gold)}
 
   <div id="joy" aria-label="Joystick"><div id="knob"></div></div>
   <div class="pad">
+    <button class="btn" id="bSup">Foudre</button>
+    <button class="btn" id="bSweep">Balay&shy;ette</button>
     <button class="btn" id="bPow">Tempête</button>
     <button class="btn" id="bDash">Esquive</button>
+    <button class="btn" id="bHeavy">Lourd</button>
     <button class="btn" id="bJump">Saut</button>
     <button class="btn" id="bKick">Pied</button>
     <button class="btn" id="bAtk">Frappe</button>
@@ -204,9 +211,9 @@ h1 em{font-style:normal;color:var(--gold)}
       <span class="eyebrow">Acte I · Les Quartiers suspendus</span>
       <h1>Les Héritiers <em>d'Orun</em></h1>
       <p class="tag">Nova-Kemet tombe. Sombre-Lune vide les Orishas-machines qui la portent. Amara, lame-tempête des Gardiens, descend vers le cœur du Marché Haut.</p>
-      <div class="keys" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>I</b>pied</span><span><b>K</b>saut</span><span><b>L</b>Tempête</span><span><b>Maj</b>esquive</span><span><b>Contre un ennemi</b>prise · J genou · K dans son dos · arrière+J projection</span><span><b>Direction + L</b>Ruée-tempête</span><span><b>Manette</b>compatible</span></div>
+      <div class="keys" id="keys"><span><b>Flèches / ZQSD</b>déplacement</span><span><b>J</b>frappe</span><span><b>U</b>coup lourd</span><span><b>I</b>pied</span><span><b>N</b> ou <b>↓+I</b>balayette</span><span><b>K</b>saut (J / I en l'air)</span><span><b>L</b>Tempête</span><span><b>O</b>Foudre céleste</span><span><b>Maj</b>esquive</span><span><b>Contre un ennemi</b>prise · J genou · K dans son dos · arrière+J projection</span><span><b>Direction + L</b>Ruée-tempête</span><span><b>Manette</b>compatible</span></div>
       <div class="row opts"><button class="opt on" id="m1p">1 joueur</button><button class="opt" id="m2p">2 joueurs</button><span class="sep"></span><button class="opt" id="d-facile">Facile</button><button class="opt" id="d-normal">Normal</button><button class="opt" id="d-difficile">Difficile</button></div>
-      <div class="keys" id="keys2" hidden><span><b>J2 clavier</b>flèches · pavé 1 frappe · 4 pied · 2 saut · 3 Tempête · 0 esquive</span><span><b>Manettes</b>2 manettes = J1 + J2 · 1 manette = J2</span><span><b>En cours de partie</b>START sur la 2e manette (ou Entrée du pavé) pour rejoindre</span></div>
+      <div class="keys" id="keys2" hidden><span><b>J2 clavier</b>flèches · pavé 1 frappe · 5 lourd · 4 pied · 7 balayette · 2 saut · 3 Tempête · 6 Foudre · 0 esquive</span><span><b>Manettes</b>2 manettes = J1 + J2 · 1 manette = J2</span><span><b>En cours de partie</b>START sur la 2e manette (ou Entrée du pavé) pour rejoindre</span></div>
       <div class="row"><button class="go" id="bStart">Commencer</button><span class="sub" id="best"></span></div>
     </div>
   </div>
@@ -240,4 +247,4 @@ h1 em{font-style:normal;color:var(--gold)}
 </div>
 
 <script src="phaser.min.js"></script>
-<script src="game.js?v=16" charset="utf-8"></script>
+<script src="game.js?v=18" charset="utf-8"></script>
