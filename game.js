@@ -240,7 +240,7 @@ function regAtlas(sc, A, tp) {
 }
 /* ---------- Animation ---------- */
 // coups dont l'animation dédiée n'est pas encore produite : on réutilise la plus proche
-const CLIP_ALIAS = { kick: 'atk3', sweep: 'atk2', rush: 'dash' };
+const CLIP_ALIAS = { kick: 'atk3', kick2: 'kick', sweep: 'kick', rush: 'dash', held: 'hurt', win: 'idle', grab: 'atk1', knee: 'atk2', throw: 'atk3' };
 function setClip(a, clip, fps, loop, onEnd) {
   if (a.clip === clip && a.loop && loop) return;
   const C = SC.META[a.kind].clips; if (!C[clip] && CLIP_ALIAS[clip] && C[CLIP_ALIAS[clip]]) clip = CLIP_ALIAS[clip]; if (!C[clip]) clip = C.idle ? 'idle' : Object.keys(C)[0];
@@ -467,15 +467,16 @@ const ATK = {
   atk3: { fps: 30, win: [.45, .85], reach: 190, dmg: 18, lunge: 60, kind: 'heavy' },
   airAtk: { fps: 26, win: [.15, .9], reach: 160, dmg: 15, lunge: 0, kind: 'heavy' },
   dash: { fps: 30, win: [.1, .75], reach: 170, dmg: 13, lunge: 0, kind: 'heavy' },
-  kick: { fps: 26, win: [.35, .78], reach: 185, dmg: 15, lunge: 35, kind: 'heavy' },
-  sweep: { fps: 26, win: [.3, .8], reach: 175, dmg: 12, lunge: 10, kind: 'heavy', depth: 60 },
-  rush: { fps: 22, win: [.05, .85], reach: 150, dmg: 26, lunge: 0, kind: 'power', depth: 60 }
+  kick: { fps: 24, win: [.3, .7], reach: 185, dmg: 15, lunge: 35, kind: 'heavy' },
+  kick2: { fps: 22, win: [.35, .75], reach: 195, dmg: 18, lunge: 40, kind: 'heavy' },
+  sweep: { fps: 22, win: [.35, .85], reach: 175, dmg: 12, lunge: 10, kind: 'heavy', depth: 60 },
+  rush: { fps: 16, win: [.05, .85], reach: 150, dmg: 26, lunge: 0, kind: 'power', depth: 60 }
 };
 function startAtk(p, clip) {
   const I = p.inp;
   if (I.x && clip !== 'dash') p.face = Math.sign(I.x); // coup arrière : on se retourne en frappant
   p.st = clip; p.t = 0; p.atkId++; sfx.swing(); const A = ATK[clip];
-  setClip(p, clip, A.fps * (p.weapon && p.weapon.kind === 'hammer' ? .85 : 1) * RANKS[p.rank - 1].spd, false, () => { if (p.st === clip) { if (p.buffer && (clip === 'atk1' || clip === 'atk2')) { const b = p.buffer; p.buffer = 0; startAtk(p, b === 2 ? 'kick' : clip === 'atk1' ? 'atk2' : 'atk3'); } else toIdle(p); } });
+  setClip(p, clip, A.fps * (p.weapon && p.weapon.kind === 'hammer' ? .85 : 1) * RANKS[p.rank - 1].spd, false, () => { if (p.st === clip) { if (p.buffer && (clip === 'atk1' || clip === 'atk2')) { const b = p.buffer; p.buffer = 0; startAtk(p, b === 2 ? 'kick2' : clip === 'atk1' ? 'atk2' : 'atk3'); } else toIdle(p); } });
   p.fx = false;
 }
 function playerUpdate(p, dt) {
@@ -487,6 +488,7 @@ function playerUpdate(p, dt) {
   const fl = floorAt(p.x);
   const grounded = p.z <= 0;
   if (p.st === 'dead') { physics(p, dt); return; }
+  if (p.st === 'win') { p.vx = p.vy = 0; return; }
   // entrées
   if (I.pow) {
     I.pow = 0; const ok = grounded && ['idle', 'walk', 'atk1', 'atk2', 'atk3', 'hurt', 'land'].includes(p.st);
@@ -600,7 +602,7 @@ function tryGrab(p) {
     if (dx > 20 && dx < 78 && Math.abs(e.y - p.y) < 18) {
       p.st = 'grab'; p.t = 0; p.knees = 0; p.grabE = e; p.vx = p.vy = 0; p.run = false; p.vault = null;
       e.st = 'grabbed'; e.atk = false; e.vx = e.vy = 0; e.face = -p.face; e.t = 0;
-      setClip(e, 'hurt', .001, false); setClip(p, 'atk1', .001, false); p.at = 1;
+      setClip(e, 'hurt', .001, false); setClip(p, 'grab', 6, true);
       sfx.block(); floatTxt(p.x, p.y - 230, 'PRISE', '#ffd36b'); tip('grab');
       return;
     }
@@ -618,7 +620,7 @@ function grabUpdate(p, dt) {
   if (p.vault) {
     const v = p.vault; v.t += dt; const k = clamp(v.t / .36, 0, 1);
     p.x = v.x0 + (v.x1 - v.x0) * k; p.z = Math.sin(k * Math.PI) * 150; I.atk = I.jump = 0;
-    if (k >= 1) { p.vault = null; p.z = 0; p.face = v.face; p.t = 0; sfx.land(); SC.pDust.explode(6, p.x, p.y); setClip(p, 'atk1', .001, false); p.at = 1; floatTxt(p.x, p.y - 230, 'DANS LE DOS', '#ffd36b'); }
+    if (k >= 1) { p.vault = null; p.z = 0; p.face = v.face; p.t = 0; sfx.land(); SC.pDust.explode(6, p.x, p.y); setClip(p, 'grab', 6, true); floatTxt(p.x, p.y - 230, 'DANS LE DOS', '#ffd36b'); }
     else return;
   }
   if (e.st !== 'grabbed') { releaseGrab(p); return; }
@@ -638,7 +640,7 @@ function grabUpdate(p, dt) {
   if (I.atk) {
     I.atk = 0; p.knees++; p.t = Math.min(p.t, .9); sfx.swing();
     const last = p.knees >= 3;
-    setClip(p, last ? 'atk3' : 'atk2', last ? 34 : 44, false, () => { if (p.st === 'grab') { setClip(p, 'atk1', .001, false); p.at = 1; } });
+    setClip(p, 'knee', last ? 30 : 38, false, () => { if (p.st === 'grab') setClip(p, 'grab', 6, true); });
     later(.08, () => {
       if (p.st !== 'grab' || p.grabE !== e || e.dead) return;
       e.inv = 0; e.st = 'think';
@@ -652,7 +654,7 @@ function grabUpdate(p, dt) {
 }
 function throwE(p, e, dir) {
   p.face = dir; p.grabE = null; p.grabCd = .5; sfx.heavy(); hitstop(.06);
-  setClip(p, 'atk3', 32, false, () => p.st === 'grab' && toIdle(p));
+  setClip(p, 'throw', 30, false, () => p.st === 'grab' && toIdle(p));
   e.st = 'thrown'; e.t = 0; e.face = -dir; e.vx = dir * 600; e.vz = 420; e.z = 30; e.thrHit = new Set(); e.owner = p; e.slam = 16;
   setClip(e, 'fall', 22, false); floatTxt(p.x, p.y - 230, 'PROJECTION', '#ffd36b');
   later(.25, () => p.st === 'grab' && toIdle(p));
@@ -660,7 +662,7 @@ function throwE(p, e, dir) {
 // prise de dos : l'ennemi passe par-dessus et s'écrase derrière (dégâts doublés à l'impact)
 function suplex(p, e) {
   p.grabE = null; p.grabCd = .6; sfx.heavy(); hitstop(.08); shake(120, .006);
-  setClip(p, 'atk3', 30, false, () => p.st === 'grab' && toIdle(p));
+  setClip(p, 'throw', 28, false, () => p.st === 'grab' && toIdle(p));
   e.st = 'thrown'; e.t = 0; e.vx = -p.face * 260; e.vz = 760; e.z = 60; e.thrHit = new Set(); e.owner = p; e.slam = 32;
   setClip(e, 'fall', 18, false); floatTxt(p.x, p.y - 240, 'RENVERSEMENT', '#ffd36b', true);
   later(.3, () => p.st === 'grab' && toIdle(p));
@@ -672,7 +674,7 @@ function enemyGrab(e, p) {
   if (p.st === 'grab') releaseGrab(p);
   e.st = 'holding'; e.held = p; e.t = 0; e.atk = true; e.vx = e.vy = 0; e.holdHit = .7;
   p.st = 'held'; p.heldBy = e; p.mash = 0; p.t = 0; p.vx = p.vy = 0; p.run = false; dropWeapon(p);
-  p.face = -e.face; setClip(p, 'hurt', .001, false); setClip(e, 'atk1', .001, false); e.at = 0;
+  p.face = -e.face; setClip(p, 'held', 14, true); setClip(e, 'atk1', .001, false); e.at = 0;
   sfx.block(); floatTxt(p.x, p.y - 230, 'SAISIE ! MARTÈLE', '#ff5a6e', true); tip('held');
   return true;
 }
@@ -1048,7 +1050,7 @@ function shotsUpdate(dt) {
     g.lineStyle(2, 0xffffff, 1); g.beginPath(); g.moveTo(s.x - Math.sign(s.vx) * 40, s.y - s.z); g.lineTo(s.x, s.y - s.z); g.strokePath();
     if (!s.reflected) for (const p of G.players) {
       if (!p.active || s.life <= 0 || !(Math.abs(s.x - p.x) < 34 && Math.abs(s.y - p.y) < 26 && p.z < 150)) continue;
-      if (['atk1', 'atk2', 'atk3', 'kick'].includes(p.st) && Math.sign(s.x - p.x) === p.face) { s.vx *= -1.2; s.dmg = 24; s.reflected = true; s.owner = p; sfx.block(); floatTxt(p.x, p.y - 220, 'RENVOYÉ !', '#8ef7ff'); hitstop(.05); break; }
+      if (['atk1', 'atk2', 'atk3', 'kick', 'kick2'].includes(p.st) && Math.sign(s.x - p.x) === p.face) { s.vx *= -1.2; s.dmg = 24; s.reflected = true; s.owner = p; sfx.block(); floatTxt(p.x, p.y - 220, 'RENVOYÉ !', '#8ef7ff'); hitstop(.05); break; }
       else if (hurtPlayer(p, s.dmg, { x: s.x - s.vx }, false)) { s.life = 0; break; }
     }
     if (s.reflected) for (const e of G.en) if (!e.dead && Math.abs(s.x - e.x) < 40 && Math.abs(s.y - e.y) < 30) { hitEnemy(e, s.dmg, 'heavy', { x: s.x - s.vx, face: Math.sign(s.vx), owner: s.owner }); s.life = 0; }
@@ -1280,6 +1282,7 @@ function showOver() {
   $('over').hidden = false; saveBest();
 }
 function victory() {
+  for (const p of G.players) if (p.active && p.st !== 'out' && p.st !== 'dead') { p.st = 'win'; p.vx = p.vy = 0; setClip(p, 'win', 12, false); }
   G.ended = true; playTrack('clear'); $('boss').hidden = true;
   cutscene(TALK.win, () => {
   state = 'end'; document.body.classList.remove('playing'); saveBest(); later(4, () => playTrack('title'), true);
