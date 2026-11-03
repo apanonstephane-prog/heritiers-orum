@@ -50,6 +50,8 @@ for char, cs in spec.items():
                     if not bb: bb = (0, 0, 2, 2)
                     t = im.crop(bb); pg, x, y = place(t)
                     if mode == 'g': ax, ay = anchors[src][0] - bb[0], anchors[src][1] - bb[1]
+                    elif mode == 'cb':  # recentré sur le corps (colonne la plus dense), pieds en bas : déplacements portés par le moteur
+                        col = np.convolve(np.array(t)[:, :, 3].astype(float).sum(0), np.ones(31) / 31, 'same'); ax, ay = float(col.argmax()), t.height
                     elif mode == 'b': ax, ay = anchors[src][0] - bb[0], t.height  # saut : pieds = bas de la frame, la hauteur vient de la physique
                     else: ax, ay = t.width / 2, t.height / 2
                     cache[k] = 1

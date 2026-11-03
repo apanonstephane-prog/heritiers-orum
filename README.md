@@ -22,6 +22,9 @@ Beat 'em up 2.5D afro-futuriste (Phaser 3.80, HTML/JS statique, sans build). Jeu
 - `STORY.md` : bible narrative (monde, personnages, 3 actes, 3 boss).
 - `intro/` : cinématique (8 plans Higgsfield, dont 4 animés avec Kling 4.0).
 
+## Héros jouables
+Amara, Kofi, Zuri, Kenzo, Soléa, Toussaint : choix à l'écran titre (J1 et J2). Planches dans `h/` (`atlas_<héros>` bureau, `atlas_m<héros>` mobile), chargées à la demande. Table `HEROES` (stats) et `SUPER` (deux supers par héros) dans `game.js`. Images sources dans `pipeline/frames/h_<héros>`, specs `spec_h_*.json`.
+
 ## Actes
 Chaque acte se termine par une cinématique (plans dans `cine/`, séquences `CINES` dans `game.js`) ; celle de l'Acte VI est la fin du jeu.
 - **Acte I · Les Quartiers suspendus** : décor à la racine, boss Oba Ferrum.
